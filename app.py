@@ -5,11 +5,18 @@ Drug Interaction Risk Assessment System
 import streamlit as st
 import numpy as np
 from query_processor import QueryProcessor
-from search_engines import V1KeywordSearch, V2TFIDFSearch, V3VectorSearch
+from search_engines import V1KeywordSearch, V2TFIDFSearch, V3VectorSearch, V3ActianVectorSearch
 from results_ranker import ResultsRanker
 from response_generator import ResponseGenerator
 from sample_data import get_sample_cases
 from data_models import FAERSCase
+
+# Try to import Actian DB (optional)
+try:
+    from actian_vector_db import ActianVectorDB
+    ACTIAN_AVAILABLE = True
+except ImportError:
+    ACTIAN_AVAILABLE = False
 
 # Page configuration
 st.set_page_config(
@@ -34,6 +41,29 @@ if 'cases' not in st.session_state:
     
     st.session_state.v3_search = V3VectorSearch(st.session_state.query_processor)
     st.session_state.v3_search.fit(st.session_state.cases)
+    
+    # Initialize Actian DB (if available)
+    st.session_state.actian_db = None
+    st.session_state.v3_actian_search = None
+    if ACTIAN_AVAILABLE:
+        try:
+            st.session_state.actian_db = ActianVectorDB(
+                host="localhost:50051",
+                query_processor=st.session_state.query_processor
+            )
+            # Try to connect (will fail gracefully if DB not running)
+            try:
+                st.session_state.actian_db.connect()
+                st.session_state.actian_db.ensure_collection()
+                st.session_state.actian_db.load_cases(st.session_state.cases)
+                st.session_state.v3_actian_search = V3ActianVectorSearch(st.session_state.actian_db)
+                st.session_state.actian_connected = True
+            except Exception as e:
+                st.session_state.actian_connected = False
+                st.session_state.actian_error = str(e)
+        except Exception as e:
+            st.session_state.actian_connected = False
+            st.session_state.actian_error = str(e)
 
 def main():
     st.title("💊 Drug Interaction Risk Assessment System")
@@ -42,11 +72,37 @@ def main():
     # Sidebar for configuration
     with st.sidebar:
         st.header("⚙️ Configuration")
+        
+        # Search engine options
+        search_options = ["V3: Vector Search (In-Memory)", "V2: TFIDF + Cosine", "V1: Keyword Match"]
+        if ACTIAN_AVAILABLE and st.session_state.get('actian_connected', False):
+            search_options.insert(0, "V3Actian: Vector Search (Actian DB)")
+        
         search_version = st.selectbox(
             "Search Engine Version",
-            ["V3: Vector Search (Recommended)", "V2: TFIDF + Cosine", "V1: Keyword Match"],
+            search_options,
             index=0
         )
+        
+        # Show Actian DB status
+        if ACTIAN_AVAILABLE:
+            st.markdown("---")
+            if st.session_state.get('actian_connected', False):
+                st.success("✅ Actian VectorAI DB Connected")
+                stats = st.session_state.actian_db.get_collection_stats()
+                if stats.get('exists'):
+                    st.info(f"📊 Cases in DB: {stats.get('count', 0)}")
+            else:
+                st.warning("⚠️ Actian DB Not Connected")
+                if st.session_state.get('actian_error'):
+                    with st.expander("Error Details"):
+                        st.code(st.session_state.actian_error)
+                st.markdown("""
+                **To use Actian DB:**
+                1. Download the wheel file from [GitHub](https://github.com/hackmamba-io/actian-vectorAI-db-beta)
+                2. Install: `pip install actiancortex-0.1.0b1-py3-none-any.whl`
+                3. Start Docker: `docker compose up`
+                """)
         
         use_llm = st.checkbox("Use LLM Summarization (Gemini)", value=True)
         
@@ -96,7 +152,19 @@ def main():
             processed = st.session_state.query_processor.process_query(query)
             
             # Perform search based on version
-            if "V3" in search_version:
+            if "V3Actian" in search_version:
+                if st.session_state.v3_actian_search:
+                    search_results = st.session_state.v3_actian_search.search(
+                        processed['embedding'], 
+                        top_k=10
+                    )
+                else:
+                    st.error("Actian VectorAI DB not available. Using in-memory search instead.")
+                    search_results = st.session_state.v3_search.search(
+                        processed['embedding'], 
+                        top_k=10
+                    )
+            elif "V3" in search_version:
                 search_results = st.session_state.v3_search.search(
                     processed['embedding'], 
                     top_k=10

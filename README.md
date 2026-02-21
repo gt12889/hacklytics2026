@@ -8,7 +8,8 @@ A comprehensive system for analyzing drug interaction risks using FAERS (FDA Adv
 - **Multiple Search Engines**: 
   - V1: Keyword exact match (baseline)
   - V2: TFIDF + Cosine Similarity
-  - V3: Vector Search with sentence transformers (recommended)
+  - V3: Vector Search with sentence transformers (in-memory)
+  - V3Actian: Vector Search with Actian VectorAI DB (production-scale, requires setup)
 - **Intelligent Risk Scoring**: 
   - Semantic similarity matching
   - Outcome severity weighting
@@ -77,7 +78,13 @@ pip install -r requirements.txt
    GEMINI_API_KEY=your_api_key_here
    ```
 
-4. **Run the application**:
+4. **(Optional) Set up Actian VectorAI DB** for production-scale vector search:
+   - See [ACTIAN_SETUP.md](ACTIAN_SETUP.md) for detailed instructions
+   - Download the wheel file from [GitHub](https://github.com/hackmamba-io/actian-vectorAI-db-beta)
+   - Install: `pip install actiancortex-0.1.0b1-py3-none-any.whl`
+   - Start Docker: `docker compose up -d`
+
+5. **Run the application**:
 ```bash
 streamlit run app.py
 ```
@@ -140,8 +147,8 @@ The system includes sample FAERS cases for testing. You can:
 - Integration with real FAERS database
 - Support for more drug names and conditions
 - Advanced demographic risk modeling
-- Integration with Actian VectorAI for production-scale vector search
 - Export functionality for clinical reports
+- Filtered search with Actian VectorAI DB (by demographics, outcomes, etc.)
 
 ## ⚠️ Disclaimer
 

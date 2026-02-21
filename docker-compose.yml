@@ -1,0 +1,11 @@
+services:
+  vectoraidb:
+    image: localhost/actian/vectoraidb:1.0b
+    # platform: linux/amd64   # Uncomment on macOS
+    container_name: vectoraidb
+    ports:
+      - "0.0.0.0:50051:50051"  # Bind to all interfaces for team access
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
+    stop_grace_period: 2m

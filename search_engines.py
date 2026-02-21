@@ -2,7 +2,8 @@
 Search Engine Implementations
 V1: Keyword exact match
 V2: TFIDF + Cosine Similarity
-V3: Vector Search with embeddings
+V3: Vector Search with embeddings (in-memory)
+V3Actian: Vector Search with Actian VectorAI DB
 """
 from typing import List, Dict, Tuple
 import numpy as np
@@ -73,6 +74,32 @@ class V2TFIDFSearch:
         return results
 
 
+class V3ActianVectorSearch:
+    """V3: Vector Search using Actian VectorAI DB"""
+    
+    def __init__(self, actian_db):
+        """
+        Initialize with Actian VectorAI DB instance
+        
+        Args:
+            actian_db: ActianVectorDB instance
+        """
+        self.actian_db = actian_db
+    
+    def search(self, query_embedding: np.ndarray, top_k: int = 10) -> List[Tuple[FAERSCase, float]]:
+        """
+        Search using Actian VectorAI DB
+        
+        Args:
+            query_embedding: Query embedding vector
+            top_k: Number of results to return
+            
+        Returns:
+            List of (case, similarity_score) tuples
+        """
+        return self.actian_db.search(query_embedding, top_k=top_k)
+
+
 class V3VectorSearch:
     """V3: Vector Search using sentence transformer embeddings"""
     
@@ -109,3 +136,29 @@ class V3VectorSearch:
         
         results = [(self.cases[i], float(similarities[i])) for i in top_indices if similarities[i] > 0]
         return results
+
+
+class V3ActianVectorSearch:
+    """V3: Vector Search using Actian VectorAI DB"""
+    
+    def __init__(self, actian_db):
+        """
+        Initialize with Actian VectorAI DB instance
+        
+        Args:
+            actian_db: ActianVectorDB instance
+        """
+        self.actian_db = actian_db
+    
+    def search(self, query_embedding: np.ndarray, top_k: int = 10) -> List[Tuple[FAERSCase, float]]:
+        """
+        Search using Actian VectorAI DB
+        
+        Args:
+            query_embedding: Query embedding vector
+            top_k: Number of results to return
+            
+        Returns:
+            List of (case, similarity_score) tuples
+        """
+        return self.actian_db.search(query_embedding, top_k=top_k)
