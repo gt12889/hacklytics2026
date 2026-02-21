@@ -10,3 +10,6 @@ grpcio>=1.68.1
 protobuf>=5.29.2
 pydantic>=2.10.4
 requests>=2.31.0
+tqdm
+pyarrow
+actiancortex

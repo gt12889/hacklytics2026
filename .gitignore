@@ -6,6 +6,7 @@ __pycache__/
 .Python
 env/
 venv/
+.venv/
 ENV/
 build/
 develop-eggs/
@@ -22,6 +23,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+*.pyc
 
 # Environment variables
 .env
@@ -44,3 +46,7 @@ Thumbs.db
 # Model cache
 .cache/
 models/
+
+# Data files
+data/raw/*.json
+data/processed/*.parquet
