@@ -7,6 +7,7 @@ embeddings, and batch-upserts them into Actian VectorAI DB with metadata payload
 
 import os
 import sys
+import time
 
 import numpy as np
 import pandas as pd
@@ -68,6 +69,29 @@ def _build_payload(row: pd.Series) -> dict:
     }
 
 
+def _upsert_with_retry(client, collection, ids, vectors, payloads, max_retries=3):
+    """Batch upsert with exponential backoff. On persistent failure, try smaller batches."""
+    delay = 2.0
+    for attempt in range(max_retries):
+        try:
+            client.batch_upsert(collection, ids, vectors, payloads)
+            return
+        except Exception as e:
+            if attempt < max_retries - 1:
+                print(f"\n  Batch upsert failed (attempt {attempt+1}): {e}")
+                print(f"  Retrying in {delay:.0f}s...")
+                time.sleep(delay)
+                delay *= 2
+            else:
+                # Last resort: try one-at-a-time
+                print(f"\n  Batch failed after {max_retries} attempts. Trying individual upserts...")
+                for i in range(len(ids)):
+                    try:
+                        client.batch_upsert(collection, [ids[i]], [vectors[i]], [payloads[i]])
+                    except Exception as inner_e:
+                        print(f"  WARNING: Failed to upsert id={ids[i]}: {inner_e}")
+
+
 def embed_and_load(docs_path: str | None = None):
     """End-to-end: load docs → embed → create collection → batch upsert."""
     df = load_documents(docs_path)
@@ -106,11 +130,9 @@ def embed_and_load(docs_path: str | None = None):
         print(f"  Upserting {n:,} vectors in batches of {batch_size}...")
         for start in tqdm(range(0, n, batch_size), desc="Batch upsert"):
             end = min(start + batch_size, n)
-            client.batch_upsert(
-                config.VECTORDB_COLLECTION,
-                all_ids[start:end],
-                all_vectors[start:end],
-                payloads[start:end],
+            _upsert_with_retry(
+                client, config.VECTORDB_COLLECTION,
+                all_ids[start:end], all_vectors[start:end], payloads[start:end],
             )
 
         # Verify
