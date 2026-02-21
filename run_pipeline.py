@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-RxGuard — Phase 1 end-to-end pipeline runner.
+RxGuard — end-to-end pipeline runner (Phase 1 + Phase 2).
 
 Usage:
     python run_pipeline.py              # run full pipeline
@@ -18,25 +18,30 @@ import config
 from src.data_collector import collect_all
 from src.data_cleaner import clean_all
 from src.document_builder import build_documents
+from src.vector_store import embed_and_load
 
 
 def run_pipeline():
-    """Execute the full pipeline: collect → clean → build documents."""
+    """Execute the full pipeline: collect → clean → build documents → embed & load."""
     print("=" * 60)
-    print("RxGuard Phase 1 — Data Pipeline")
+    print("RxGuard Pipeline — Phase 1 + Phase 2")
     print("=" * 60)
 
     # Step 1: Collect
-    print("\n[1/3] Collecting FAERS data from openFDA...")
+    print("\n[1/4] Collecting FAERS data from openFDA...")
     summary = collect_all()
 
     # Step 2: Clean
-    print("\n[2/3] Cleaning and deduplicating...")
+    print("\n[2/4] Cleaning and deduplicating...")
     cleaned_df = clean_all()
 
     # Step 3: Build document chunks
-    print("\n[3/3] Building document chunks...")
+    print("\n[3/4] Building document chunks...")
     doc_df = build_documents()
+
+    # Step 4: Embed and load into vector store
+    print("\n[4/4] Embedding and loading into VectorAI DB...")
+    embed_and_load()
 
     # Validate
     print("\n" + "=" * 60)
@@ -142,12 +147,37 @@ def validate(
                       3: "life-threatening", 4: "death"}
             print(f"    {score} ({labels.get(score, '?')}): {count:,}")
 
+    # --- Vector store validation ---
+    try:
+        from cortex import CortexClient
+        from src.search import search_faers, print_results
+
+        print("\nVector store:")
+        with CortexClient(config.VECTORDB_ADDRESS) as client:
+            if client.has_collection(config.VECTORDB_COLLECTION):
+                count = client.count(config.VECTORDB_COLLECTION, exact=True)
+                print(f"  Collection '{config.VECTORDB_COLLECTION}': {count:,} vectors")
+                if doc_df is not None:
+                    expected = len(doc_df)
+                    status = "PASSED" if count == expected else "MISMATCH"
+                    print(f"  Count check: {status} (expected {expected:,}, got {count:,})")
+
+                # Test search
+                print("\n  Test search: 'warfarin bleeding'")
+                results = search_faers("warfarin bleeding", top_k=3)
+                print_results(results)
+            else:
+                print(f"  Collection '{config.VECTORDB_COLLECTION}' not found — "
+                      "run embed_and_load() first.")
+    except Exception as e:
+        print(f"\nVector store validation skipped: {e}")
+
     print("\n" + "=" * 60)
-    print("Phase 1 pipeline complete.")
+    print("Pipeline complete.")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="RxGuard Phase 1 pipeline")
+    parser = argparse.ArgumentParser(description="RxGuard pipeline")
     parser.add_argument("--validate", action="store_true", help="Only validate existing outputs")
     args = parser.parse_args()
 

@@ -1,6 +1,14 @@
 .venv/
+<<<<<<< HEAD
   __pycache__/
   *.pyc
   .env
   data/raw/*.json
   data/processed/*.parquet
+=======
+__pycache__/
+*.pyc
+.env
+data/raw/*.json
+data/processed/*.parquet
+>>>>>>> c36927e6029209537c1fba6180f08bd0be11800a
