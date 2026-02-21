@@ -55,23 +55,13 @@ def _extract_drugs(drug_list: list[dict] | None) -> list[dict]:
         raw_name = d.get("medicinalproduct", "")
         name = normalize_drug_name(generic or raw_name)
 
-        brand_names = openfda.get("brand_name", [])
-        brand = brand_names[0].lower() if brand_names else ""
-
-        pharm_classes = openfda.get("pharm_class_epc", [])
-        pharm_class = pharm_classes[0] if pharm_classes else ""
-
         char_code = str(d.get("drugcharacterization", ""))
         char_map = {"1": "suspect", "2": "concomitant", "3": "interacting"}
         characterization = char_map.get(char_code, char_code)
 
-        indication = d.get("drugindication", "")
         out.append({
             "name": name,
-            "brand": brand,
-            "pharm_class": pharm_class,
             "characterization": characterization,
-            "indication": indication or "",
         })
     return out
 
@@ -121,28 +111,19 @@ def flatten_record(record: dict) -> dict:
     drugs = _extract_drugs(patient.get("drug"))
     reactions = _extract_reactions(patient.get("reaction"))
     drug_names = [d["name"] for d in drugs if d["name"]]
-    indications = list({d["indication"] for d in drugs if d["indication"]})
 
     return {
         "safetyreportid": record.get("safetyreportid", ""),
         "safetyreportversion": record.get("safetyreportversion", ""),
-        "receivedate": record.get("receivedate", ""),
         "serious": record.get("serious", ""),
         "seriousnessdeath": record.get("seriousnessdeath", ""),
         "seriousnesshospitalization": record.get("seriousnesshospitalization", ""),
         "seriousnesslifethreatening": record.get("seriousnesslifethreatening", ""),
-        "seriousnessdisabling": record.get("seriousnessdisabling", ""),
-        "seriousnessother": record.get("seriousnessother", ""),
-        "occurcountry": record.get("occurcountry", ""),
         "patient_age": _parse_age(record),
         "patient_sex": _sex_label(patient.get("patientsex")),
         "drugs": drug_names,
         "drugs_detail": drugs,
         "reactions": reactions,
-        "indications": indications,
-        "narrative": (patient.get("summary", {}) or {}).get(
-            "narrativeincludeclinical", ""
-        ),
     }
 
 
@@ -183,12 +164,6 @@ def flag_missing(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def parse_dates(df: pd.DataFrame) -> pd.DataFrame:
-    """Parse receivedate (YYYYMMDD string) to datetime."""
-    df["report_date"] = pd.to_datetime(df["receivedate"], format="%Y%m%d", errors="coerce")
-    return df
-
-
 def clean_all() -> pd.DataFrame:
     """Run the full cleaning pipeline: load → flatten → dedup → normalize → save."""
     raw_records = load_raw_records()
@@ -200,7 +175,6 @@ def clean_all() -> pd.DataFrame:
 
     df = deduplicate(df)
     df = flag_missing(df)
-    df = parse_dates(df)
 
     # Save
     os.makedirs(config.DATA_PROCESSED_DIR, exist_ok=True)

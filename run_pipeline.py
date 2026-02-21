@@ -18,7 +18,6 @@ import config
 from src.data_collector import collect_all
 from src.data_cleaner import clean_all
 from src.document_builder import build_documents
-from src.vector_store import embed_and_load
 
 
 def run_pipeline():
@@ -39,8 +38,9 @@ def run_pipeline():
     print("\n[3/4] Building document chunks...")
     doc_df = build_documents()
 
-    # Step 4: Embed and load into vector store
+    # Step 4: Embed and load into vector store (lazy import)
     print("\n[4/4] Embedding and loading into VectorAI DB...")
+    from src.vector_store import embed_and_load
     embed_and_load()
 
     # Validate
@@ -70,11 +70,11 @@ def validate(
     # --- Collection summary ---
     if collection_summary:
         total = sum(collection_summary.values())
-        print(f"\nCollection: {total:,} reports across {len(collection_summary)} drugs")
+        print(f"\nCollection: {total:,} reports across {len(collection_summary)} pairs")
         top5 = sorted(collection_summary.items(), key=lambda x: -x[1])[:5]
-        print("  Top 5 drugs by report count:")
-        for drug, count in top5:
-            print(f"    {drug}: {count:,}")
+        print("  Top 5 pairs by report count:")
+        for pair, count in top5:
+            print(f"    {pair}: {count:,}")
     else:
         # Count from raw files
         raw_dir = config.DATA_RAW_DIR
@@ -98,7 +98,7 @@ def validate(
         # Severity distribution
         print("\n  Severity distribution:")
         for col in ["seriousnessdeath", "seriousnesshospitalization",
-                     "seriousnesslifethreatening", "seriousnessdisabling", "seriousnessother"]:
+                     "seriousnesslifethreatening"]:
             if col in cleaned_df.columns:
                 count = (cleaned_df[col].astype(str) == "1").sum()
                 print(f"    {col}: {count:,}")
@@ -143,7 +143,7 @@ def validate(
         # Severity score distribution
         print("\n  Severity score distribution:")
         for score, count in doc_df["severity_score"].value_counts().sort_index().items():
-            labels = {0: "unknown", 1: "serious-other", 2: "hospitalization",
+            labels = {0: "unknown", 2: "hospitalization",
                       3: "life-threatening", 4: "death"}
             print(f"    {score} ({labels.get(score, '?')}): {count:,}")
 

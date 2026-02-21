@@ -45,7 +45,7 @@ def search_faers(
 
     Returns:
         List of dicts with keys: rank, score, doc_id, text, drugs,
-        reactions, severity_score, patient_age, patient_sex, report_date.
+        reactions, severity_score, patient_age, patient_sex.
     """
     model = _get_model()
     query_vector = model.encode(query).tolist()
@@ -87,7 +87,6 @@ def search_faers(
             "severity_score": payload.get("severity_score", 0),
             "patient_age": payload.get("patient_age", -1),
             "patient_sex": payload.get("patient_sex", "unknown"),
-            "report_date": payload.get("report_date", ""),
         })
         if len(output) >= top_k:
             break

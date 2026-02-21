@@ -56,12 +56,6 @@ def _build_payload(row: pd.Series) -> dict:
     age = row.get("patient_age")
     age_val = float(age) if pd.notna(age) else -1.0
 
-    report_date = row.get("report_date")
-    if pd.notna(report_date):
-        date_str = str(report_date)[:10]  # ISO date portion
-    else:
-        date_str = ""
-
     return {
         "doc_id": str(row.get("doc_id", "")),
         "text": str(row.get("text", "")),
@@ -71,7 +65,6 @@ def _build_payload(row: pd.Series) -> dict:
         "severity_score": int(row.get("severity_score", 0)),
         "patient_age": age_val,
         "patient_sex": str(row.get("patient_sex", "unknown")),
-        "report_date": date_str,
     }
 
 

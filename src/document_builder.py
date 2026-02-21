@@ -17,10 +17,10 @@ import config
 
 
 def _severity_score(row: pd.Series) -> int:
-    """Compute a 0–4 severity score from seriousness flags.
+    """Compute a 0–3 severity score from seriousness flags.
 
     4 = death, 3 = life-threatening, 2 = hospitalization,
-    1 = disabling or other serious, 0 = not serious / unknown.
+    0 = not serious / unknown.
     """
     if str(row.get("seriousnessdeath")) == "1":
         return 4
@@ -28,10 +28,6 @@ def _severity_score(row: pd.Series) -> int:
         return 3
     if str(row.get("seriousnesshospitalization")) == "1":
         return 2
-    if str(row.get("seriousnessdisabling")) == "1":
-        return 1
-    if str(row.get("seriousnessother")) == "1":
-        return 1
     return 0
 
 
@@ -55,14 +51,6 @@ def _format_drugs(drugs_detail) -> str:
     return ", ".join(parts)
 
 
-def _format_indications(indications) -> str:
-    if indications is None or (hasattr(indications, '__len__') and len(indications) == 0):
-        return ""
-    if not isinstance(indications, list):
-        indications = list(indications)
-    return ", ".join(i for i in indications if i)
-
-
 def build_text(row: pd.Series) -> str:
     """Build a single searchable text chunk from a cleaned FAERS row."""
     parts = []
@@ -77,12 +65,6 @@ def build_text(row: pd.Series) -> str:
     drugs_detail = row.get("drugs_detail")
     parts.append(f"Drugs: {_format_drugs(drugs_detail)}.")
 
-    # Indications
-    indications = row.get("indications")
-    ind_str = _format_indications(indications)
-    if ind_str:
-        parts.append(f"Indications: {ind_str}.")
-
     # Reactions
     reactions = row.get("reactions")
     if reactions is not None and hasattr(reactions, '__len__') and len(reactions) > 0:
@@ -92,11 +74,6 @@ def build_text(row: pd.Series) -> str:
     # Outcome
     severity = _severity_score(row)
     parts.append(f"Outcome: {_outcome_label(severity)}.")
-
-    # Narrative (if available)
-    narrative = row.get("narrative", "")
-    if narrative and isinstance(narrative, str) and narrative.strip():
-        parts.append(f"Narrative: {narrative.strip()}")
 
     return " ".join(parts)
 
@@ -127,7 +104,6 @@ def build_documents(input_path: str | None = None) -> pd.DataFrame:
             "severity_score": severity,
             "patient_age": row.get("patient_age"),
             "patient_sex": row.get("patient_sex", "unknown"),
-            "report_date": row.get("report_date"),
         })
 
     doc_df = pd.DataFrame(docs)
