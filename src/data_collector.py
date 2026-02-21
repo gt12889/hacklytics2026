@@ -142,22 +142,34 @@ def collect_all(pairs: list[tuple[str, str]] | None = None) -> dict[str, int]:
     for drug_a, drug_b in tqdm(pairs, desc="Collecting FAERS data"):
         pair_key = f"{drug_a}+{drug_b}"
 
-        # Skip if already downloaded
+        # Load existing cached data (if any)
         existing_path = os.path.join(config.DATA_RAW_DIR, f"{drug_a}_{drug_b}.json")
+        existing: list[dict] = []
         if os.path.exists(existing_path):
             with open(existing_path) as f:
                 existing = json.load(f)
+
+        # Skip if we already have enough
+        if len(existing) >= config.REPORTS_PER_PAIR:
             summary[pair_key] = len(existing)
             tqdm.write(f"  {pair_key}: {len(existing)} reports (cached)")
             continue
 
+        # Fetch full set, then merge with existing (dedup by safetyreportid)
         records = fetch_pair_reports(drug_a, drug_b)
-        # Slim records before saving
         records = [_slim_record(r) for r in records]
+
+        if existing:
+            seen_ids = {r.get("safetyreportid") for r in existing}
+            new_records = [r for r in records if r.get("safetyreportid") not in seen_ids]
+            records = existing + new_records
+            tqdm.write(f"  {pair_key}: {len(existing)} cached + {len(new_records)} new = {len(records)} total")
+        else:
+            tqdm.write(f"  {pair_key}: {len(records)} reports")
+
         if records:
             save_raw(drug_a, drug_b, records)
         summary[pair_key] = len(records)
-        tqdm.write(f"  {pair_key}: {len(records)} reports")
 
     total = sum(summary.values())
     print(f"\nTotal reports collected: {total:,}")
