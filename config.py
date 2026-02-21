@@ -96,6 +96,14 @@ TARGET_DRUGS = [
 DATA_RAW_DIR = os.path.join(os.path.dirname(__file__), "data", "raw")
 DATA_PROCESSED_DIR = os.path.join(os.path.dirname(__file__), "data", "processed")
 
+# ── Actian VectorAI DB ──────────────────────────────────────────────────
+VECTORDB_ADDRESS = os.getenv("VECTORDB_ADDRESS", "localhost:50051")
+VECTORDB_COLLECTION = "faers_reports"
+EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+EMBEDDING_DIMENSION = 384
+VECTORDB_BATCH_SIZE = 500   # vectors per batch_upsert call
+HNSW_EF_SEARCH = 100        # higher = more accurate search
+
 # ── FAERS fields of interest ─────────────────────────────────────────────────
 # Top-level fields to extract from each result record
 FIELDS_OF_INTEREST = [
