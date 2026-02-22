@@ -27,7 +27,10 @@ body {
   padding: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: #E8EBE4;
+}
+
+#root {
+  min-height: 100vh;
 }
 
 h1 {
