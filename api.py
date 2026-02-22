@@ -51,12 +51,89 @@ v3_search: Optional[V3VectorSearch] = None
 ranker: Optional[ResultsRanker] = None
 response_gen: Optional[ResponseGenerator] = None
 faers_df: Optional[pd.DataFrame] = None
+precomputed_heatmap: Optional[dict] = None
+precomputed_retrieval_eval: Optional[dict] = None
+
+
+def _precompute_heatmap(all_cases: list[FAERSCase]) -> dict:
+    """Build a drug co-occurrence heatmap across the entire corpus."""
+    sev_map = {"death": 4, "serious": 3, "hospitalization": 2, "non-serious": 0}
+    drug_freq: dict[str, int] = {}
+    pair_sevs: dict[tuple[str, str], list[int]] = {}
+
+    for case in all_cases:
+        normed = list({normalize_drug(d) for d in case.drugs})
+        sev = sev_map.get(case.outcome_severity, 0)
+        for d in normed:
+            drug_freq[d] = drug_freq.get(d, 0) + 1
+        for a, b in combinations(sorted(normed), 2):
+            pair_sevs.setdefault((a, b), []).append(sev)
+
+    # Keep top 20 drugs by frequency
+    top_drugs = sorted(drug_freq, key=drug_freq.get, reverse=True)[:20]
+    top_set = set(top_drugs)
+
+    # Filter pairs to only include top-20 drugs
+    all_drugs = sorted(top_set & {d for pair in pair_sevs for d in pair})
+    n = len(all_drugs)
+    drug_idx = {d: i for i, d in enumerate(all_drugs)}
+    matrix = [[None] * n for _ in range(n)]
+
+    for (a, b), sevs in pair_sevs.items():
+        if a in top_set and b in top_set and a in drug_idx and b in drug_idx:
+            val = round(sum(sevs) / len(sevs), 2)
+            i, j = drug_idx[a], drug_idx[b]
+            matrix[i][j] = val
+            matrix[j][i] = val
+
+    return {"drugs": [d.title() for d in all_drugs], "matrix": matrix}
+
+
+def _precompute_retrieval_eval(all_cases: list[FAERSCase]) -> dict:
+    """Run all 20 TEST_QUERIES through all 4 engines and average metrics."""
+    from eval_search import TEST_QUERIES
+
+    metric_names = ["P@5", "P@10", "R@5", "R@10", "NDCG@5", "NDCG@10", "MRR"]
+    engine_sums = {
+        label: {m: 0.0 for m in metric_names}
+        for label in ["V1", "V2", "V3", "V3+R"]
+    }
+    n_queries = len(TEST_QUERIES)
+
+    for tq in TEST_QUERIES:
+        processed = query_processor.process_query(tq.query)
+        embedding = processed["embedding"]
+        context = processed["context"]
+        drugs = processed["drugs"]
+
+        relevant_ids = get_relevant_ids(all_cases, tq.expected_pair)
+        if not relevant_ids:
+            continue
+
+        v1_ids = [c.case_id for c, _ in v1_search.search(drugs, all_cases)]
+        v2_ids = [c.case_id for c, _ in v2_search.search(tq.query)]
+        v3_results = v3_search.search(embedding)
+        v3_ids = [c.case_id for c, _ in v3_results]
+        v3r_ids = [c.case_id for c, _ in ranker.rank_results(v3_results, context)]
+
+        for label, ids in [("V1", v1_ids), ("V2", v2_ids), ("V3", v3_ids), ("V3+R", v3r_ids)]:
+            metrics = compute_metrics(ids, relevant_ids)
+            for m in metric_names:
+                engine_sums[label][m] += metrics.get(m, 0.0)
+
+    engines_data = []
+    for label in ["V1", "V2", "V3", "V3+R"]:
+        avg_metrics = {m: round(engine_sums[label][m] / n_queries, 4) for m in metric_names}
+        engines_data.append({"engine": label, "metrics": avg_metrics})
+
+    return {"queryCount": n_queries, "engines": engines_data}
 
 
 @app.on_event("startup")
 def startup():
     global cases, query_processor, v1_search, v2_search, v3_search
     global ranker, response_gen, faers_df
+    global precomputed_heatmap, precomputed_retrieval_eval
 
     print("[RxGuard] Initialising components ...")
 
@@ -98,6 +175,12 @@ def startup():
     else:
         faers_df = None
         print("[RxGuard] No FAERS parquet found — will derive stats from sample data")
+
+    # 6. Precompute dataset-level analyses
+    precomputed_heatmap = _precompute_heatmap(cases)
+    print(f"[RxGuard] Precomputed heatmap: {len(precomputed_heatmap['drugs'])} drugs")
+    precomputed_retrieval_eval = _precompute_retrieval_eval(cases)
+    print(f"[RxGuard] Precomputed retrieval eval: {precomputed_retrieval_eval['queryCount']} queries")
 
     print("[RxGuard] Startup complete")
 
@@ -354,26 +437,28 @@ def _sphinx_context(
             "hospitalization": "hospitalization",
             "non-serious": "other",
         }
-        # Use full corpus filtered to drug pair (same as _aggregate_from_sample)
+        # Use full corpus filtered to drug pair with brand→generic normalization
         if len(drugs) >= 2:
-            drug_a, drug_b = drugs[0].lower(), drugs[1].lower()
+            drug_a = normalize_drug(drugs[0])
+            drug_b = normalize_drug(drugs[1])
             sev_source = [
                 c for c in cases
-                if drug_a in [d.lower() for d in c.drugs]
-                and drug_b in [d.lower() for d in c.drugs]
+                if drug_a in [normalize_drug(d) for d in c.drugs]
+                and drug_b in [normalize_drug(d) for d in c.drugs]
             ]
         else:
-            sev_source = [case for case, _ in ranked_results]
+            sev_source = []
         if not sev_source:
-            sev_source = [case for case, _ in ranked_results]
-        sev_counts = {}
-        for case in sev_source:
-            label = outcome_to_sev.get(case.outcome_severity, "other")
-            sev_counts[label] = sev_counts.get(label, 0) + case.faers_matches
-        result["severityBreakdown"] = [
-            {"severity": label, "count": sev_counts.get(label, 0)}
-            for label in SEVERITY_ORDER
-        ]
+            sev_source = []
+        if sev_source:
+            sev_counts = {}
+            for case in sev_source:
+                label = outcome_to_sev.get(case.outcome_severity, "other")
+                sev_counts[label] = sev_counts.get(label, 0) + case.faers_matches
+            result["severityBreakdown"] = [
+                {"severity": label, "count": sev_counts.get(label, 0)}
+                for label in SEVERITY_ORDER
+            ]
 
     # ── Dataset Stats (parquet only) ──────────────────────────────────────
     if df is not None:
@@ -416,86 +501,32 @@ def _sphinx_context(
                 demo_risk.append(entry)
             result["demographicRisk"] = demo_risk
 
-    # ── Drug Co-occurrence Heatmap (scoped to drug pair) ─────────────────
-    if df is not None and len(drugs) >= 2:
-        try:
-            matched = _filter_to_drug_pair(df, drugs)
-            if not matched.empty:
-                matched = _compute_severity_score(matched)
-                exploded = matched[["drugs", "severity_score"]].explode("drugs").dropna(subset=["drugs"])
-                exploded["drugs"] = exploded["drugs"].str.lower().str.strip()
-                top_drugs = exploded["drugs"].value_counts().head(20).index.tolist()
-                exploded = exploded[exploded["drugs"].isin(top_drugs)]
-
-                pairs = []
-                for idx, grp in exploded.groupby(level=0):
-                    drug_list = grp["drugs"].unique().tolist()
-                    sev = grp["severity_score"].iloc[0]
-                    for a, b in combinations(sorted(drug_list), 2):
-                        pairs.append((a, b, sev))
-
-                if pairs:
-                    pair_df = pd.DataFrame(pairs, columns=["drug_a", "drug_b", "severity"])
-                    hm_agg = pair_df.groupby(["drug_a", "drug_b"]).agg(
-                        count=("severity", "size"),
-                        mean_severity=("severity", "mean"),
-                    ).reset_index()
-                    all_drugs = sorted(set(hm_agg["drug_a"]) | set(hm_agg["drug_b"]))
-                    n = len(all_drugs)
-                    matrix = [[None] * n for _ in range(n)]
-                    drug_idx = {d: i for i, d in enumerate(all_drugs)}
-                    for _, row in hm_agg.iterrows():
-                        i, j = drug_idx[row["drug_a"]], drug_idx[row["drug_b"]]
-                        val = round(float(row["mean_severity"]), 2)
-                        matrix[i][j] = val
-                        matrix[j][i] = val
-                    result["heatmap"] = {"drugs": [d.title() for d in all_drugs], "matrix": matrix}
-        except Exception as e:
-            print(f"[RxGuard] Per-query heatmap error: {e}")
-
-    # Heatmap fallback from full corpus (scoped to drug pair)
-    if "heatmap" not in result and ranked_results:
-        try:
-            from collections import Counter
-            # Use full corpus filtered to drug pair
-            if len(drugs) >= 2:
-                drug_a, drug_b = drugs[0].lower(), drugs[1].lower()
-                hm_cases = [
-                    c for c in cases
-                    if drug_a in [d.lower() for d in c.drugs]
-                    and drug_b in [d.lower() for d in c.drugs]
-                ]
-            else:
-                hm_cases = [case for case, _ in ranked_results]
-            if not hm_cases:
-                hm_cases = [case for case, _ in ranked_results]
-            drug_counter = Counter()
-            case_drugs_list = []
-            for case in hm_cases:
-                dlist = [d.lower() for d in case.drugs]
-                case_drugs_list.append((dlist, getattr(case, "outcome_severity", "non-serious")))
-                for d in dlist:
-                    drug_counter[d] += 1
-            top_drugs = [d for d, _ in drug_counter.most_common(20)]
-            sev_map = {"death": 4, "serious": 3, "hospitalization": 2, "non-serious": 0}
-            pair_sev = {}
-            for dlist, outcome in case_drugs_list:
-                sev = sev_map.get(outcome, 0)
-                for a, b in combinations(sorted(set(dlist) & set(top_drugs)), 2):
-                    pair_sev.setdefault((a, b), []).append(sev)
-            if pair_sev:
-                all_drugs = sorted(set(d for pair in pair_sev for d in pair))
-                n = len(all_drugs)
-                matrix = [[None] * n for _ in range(n)]
-                drug_idx = {d: i for i, d in enumerate(all_drugs)}
-                for (a, b), sevs in pair_sev.items():
-                    val = round(sum(sevs) / len(sevs), 2)
-                    i, j = drug_idx[a], drug_idx[b]
-                    matrix[i][j] = val
-                    matrix[j][i] = val
-                result["heatmap"] = {"drugs": [d.title() for d in all_drugs], "matrix": matrix}
-        except Exception as e:
-            print(f"[RxGuard] Heatmap fallback error: {e}")
+    # ── Demographic Risk Fallback (from cases when parquet unavailable) ──
+    if "demographicRisk" not in result and len(drugs) >= 2:
+        sev_map = {"death": 4, "serious": 3, "hospitalization": 2, "non-serious": 0}
+        drug_a = normalize_drug(drugs[0])
+        drug_b = normalize_drug(drugs[1])
+        matched_cases = [
+            c for c in cases
+            if drug_a in [normalize_drug(d) for d in c.drugs]
+            and drug_b in [normalize_drug(d) for d in c.drugs]
+        ]
+        valid = [c for c in matched_cases if c.age and c.sex]
+        if valid:
+            demo_risk = []
+            for ag, (lo, hi) in zip(DEMO_AGE_LABELS, [(0, 30), (31, 50), (51, 65), (66, 80), (81, 200)]):
+                entry = {"ageGroup": ag}
+                for sex in ["male", "female"]:
+                    group = [c for c in valid if lo <= c.age <= hi and c.sex.lower() == sex]
+                    if group:
+                        mean_sev = sum(sev_map.get(c.outcome_severity, 0) for c in group) / len(group)
+                        entry[sex] = round(mean_sev, 2)
+                        entry[f"{sex}Count"] = len(group)
+                    else:
+                        entry[sex] = 0
+                        entry[f"{sex}Count"] = 0
+                demo_risk.append(entry)
+            result["demographicRisk"] = demo_risk
 
     # ── Severity by Pair (scoped to drug pair) ───────────────────────────
     if df is not None and len(drugs) >= 2:
@@ -536,20 +567,16 @@ def _sphinx_context(
             print(f"[RxGuard] Per-query severityByPair error: {e}")
 
     # severityByPair fallback from full corpus (scoped to drug pair)
-    if "severityByPair" not in result and ranked_results:
+    if "severityByPair" not in result and len(drugs) >= 2:
         try:
             sev_map = {"death": "death", "serious": "lifeThreatening", "hospitalization": "hospitalization", "non-serious": "other"}
-            if len(drugs) >= 2:
-                drug_a, drug_b = drugs[0].lower(), drugs[1].lower()
-                sbp_cases = [
-                    c for c in cases
-                    if drug_a in [d.lower() for d in c.drugs]
-                    and drug_b in [d.lower() for d in c.drugs]
-                ]
-            else:
-                sbp_cases = [case for case, _ in ranked_results]
-            if not sbp_cases:
-                sbp_cases = [case for case, _ in ranked_results]
+            drug_a = normalize_drug(drugs[0])
+            drug_b = normalize_drug(drugs[1])
+            sbp_cases = [
+                c for c in cases
+                if drug_a in [normalize_drug(d) for d in c.drugs]
+                and drug_b in [normalize_drug(d) for d in c.drugs]
+            ]
             pair_counts = {}
             for case in sbp_cases:
                 sev_label = sev_map.get(case.outcome_severity, "other")
@@ -614,47 +641,14 @@ def parse(req: ParseRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-def _compute_retrieval_eval(
-    query_text: str, drugs: list[str], processed: dict, current_engine: str
-) -> dict | None:
-    """Compute retrieval eval metrics across all 4 engines for dashboard comparison."""
-    if len(drugs) < 2:
-        return None
+# ── Analysis endpoint (precomputed, dataset-level) ───────────────────────────
 
-    d1 = normalize_drug(drugs[0])
-    d2 = normalize_drug(drugs[1])
-
-    relevant_ids = get_relevant_ids(cases, (d1, d2))
-    if not relevant_ids:
-        return None
-
-    engine_map = {"v1": "V1", "v2": "V2", "v3": "V3"}
-    active_label = engine_map.get(current_engine.lower(), "V3")
-
-    embedding = processed["embedding"]
-    context = processed["context"]
-
-    v1_ids = [c.case_id for c, _ in v1_search.search(drugs, cases)]
-    v2_ids = [c.case_id for c, _ in v2_search.search(query_text)]
-    v3_results = v3_search.search(embedding)
-    v3_ids = [c.case_id for c, _ in v3_results]
-    v3r_ids = [c.case_id for c, _ in ranker.rank_results(v3_results, context)]
-
-    engines_data = []
-    for label, ids in [("V1", v1_ids), ("V2", v2_ids), ("V3", v3_ids), ("V3+R", v3r_ids)]:
-        metrics = compute_metrics(ids, relevant_ids)
-        metrics = {k: round(v, 4) for k, v in metrics.items()}
-        engines_data.append({
-            "engine": label,
-            "active": label == active_label,
-            "metrics": metrics,
-        })
-
+@app.get("/api/analysis")
+def analysis():
+    """Return precomputed dataset-level analyses (heatmap + retrieval eval)."""
     return {
-        "drugPair": [d1, d2],
-        "relevantCount": len(relevant_ids),
-        "activeEngine": active_label,
-        "engines": engines_data,
+        "heatmap": precomputed_heatmap,
+        "retrievalEval": precomputed_retrieval_eval,
     }
 
 
@@ -704,13 +698,6 @@ def search(req: SearchRequest):
         # 6b. Sphinx EDA context (severity, dataset stats, demographic risk)
         sphinx = _sphinx_context(faers_df, drugs, ranked)
 
-        # 6c. Retrieval evaluation metrics (all engines comparison)
-        try:
-            retrieval_eval = _compute_retrieval_eval(req.query, drugs, processed, req.engine)
-        except Exception as e:
-            print(f"[RxGuard] Retrieval eval error: {e}")
-            retrieval_eval = None
-
         # 7. Determine drug names for header (order by position in query)
         query_lower = req.query.lower()
         ordered_drugs = sorted(drugs, key=lambda d: query_lower.find(d.lower()))
@@ -731,7 +718,6 @@ def search(req: SearchRequest):
             "similarCases": similar_cases,
             "summary": resp.get("summary", ""),
             "recommendations": resp.get("recommendations", ""),
-            "retrievalEval": retrieval_eval,
             **sphinx,
         }
 

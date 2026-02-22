@@ -235,7 +235,6 @@ export default function RxGuardDashboard() {
   const navigate = useNavigate();
   const [expandedCase, setExpandedCase] = useState(null);
   const [hoveredBar, setHoveredBar] = useState(null);
-  const [hoveredCell, setHoveredCell] = useState(null);
   const d = location.state?.data || MOCK_DATA;
   const parsed = location.state?.parsed || null;
 
@@ -449,108 +448,47 @@ export default function RxGuardDashboard() {
         </SectionCard>
 
         {/* ── Sphinx EDA Section ─────────────────────────────────────────── */}
-        {(d.heatmap || (d.severityByPair && d.severityByPair.length > 0)) && (
+        {d.severityByPair && d.severityByPair.length > 0 && (
           <>
             <div style={{
               borderTop: "2px solid #c4d9d6",
               marginTop: 40,
               marginBottom: 28,
               paddingTop: 28,
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 12,
             }}>
-              <div style={{ fontSize: 28, fontWeight: 700, color: "#0D3D3A", lineHeight: 1.2 }}>
-                Sphinx EDA
-              </div>
-              <div style={{ fontSize: 13, color: "#888", marginTop: 4 }}>
-                Exploratory data analysis across co-occurring drugs in matched cases
-              </div>
-            </div>
-
-            {/* Drug Co-occurrence Heatmap */}
-            {d.heatmap && (() => {
-              const { drugs, matrix } = d.heatmap;
-              const n = drugs.length;
-              const cellSize = Math.max(28, Math.min(40, 700 / n));
-              const labelWidth = 100;
-
-              const severityColor = (val) => {
-                if (val == null) return "#f5f5f5";
-                const t = Math.min(val / 4, 1);
-                const r = Math.round(232 - 219 * t);
-                const g = Math.round(235 - 174 * t);
-                const b = Math.round(228 - 170 * t);
-                return `rgb(${r},${g},${b})`;
-              };
-
-              return (
-                <div style={{ marginBottom: 28 }}>
-                  <SectionCard title="Drug Co-occurrence Heatmap" subtitle="Color = mean severity for this drug pair">
-                    <div style={{ overflowX: "auto", paddingTop: 8 }}>
-                      <div style={{ display: "inline-block" }}>
-                        {/* X-axis labels */}
-                        <div style={{ display: "flex", marginLeft: labelWidth }}>
-                          {drugs.map((drug, i) => (
-                            <div key={i} style={{
-                              width: cellSize, textAlign: "center", fontSize: 9,
-                              fontWeight: 600, color: "#555",
-                              transform: "rotate(-45deg)", transformOrigin: "center bottom",
-                              whiteSpace: "nowrap", height: 60, display: "flex",
-                              alignItems: "flex-end", justifyContent: "center",
-                            }}>{drug}</div>
-                          ))}
-                        </div>
-                        {/* Rows */}
-                        {matrix.map((row, ri) => (
-                          <div key={ri} style={{ display: "flex", alignItems: "center" }}>
-                            <div style={{
-                              width: labelWidth, fontSize: 10, fontWeight: 600,
-                              color: "#555", textAlign: "right", paddingRight: 6,
-                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                            }}>{drugs[ri]}</div>
-                            {row.map((val, ci) => (
-                              <div
-                                key={ci}
-                                style={{
-                                  width: cellSize, height: cellSize,
-                                  background: ri === ci ? "#e0e0e0" : severityColor(val),
-                                  border: "1px solid #fff",
-                                  borderRadius: 2,
-                                  cursor: val != null && ri !== ci ? "pointer" : "default",
-                                  position: "relative",
-                                }}
-                                onMouseEnter={() => val != null && ri !== ci && setHoveredCell({ ri, ci, val })}
-                                onMouseLeave={() => setHoveredCell(null)}
-                              >
-                                {hoveredCell && hoveredCell.ri === ri && hoveredCell.ci === ci && (
-                                  <div style={{
-                                    position: "absolute", bottom: "110%", left: "50%",
-                                    transform: "translateX(-50%)", background: "#0D3D3A",
-                                    color: "white", padding: "4px 8px", borderRadius: 6,
-                                    fontSize: 11, whiteSpace: "nowrap", zIndex: 10,
-                                    pointerEvents: "none",
-                                    boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-                                  }}>
-                                    {drugs[ri]} + {drugs[ci]}: {val.toFixed(2)}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        ))}
-                        {/* Legend */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, marginLeft: labelWidth }}>
-                          <span style={{ fontSize: 10, color: "#888" }}>Low</span>
-                          <div style={{
-                            width: 120, height: 10, borderRadius: 4,
-                            background: "linear-gradient(to right, #E8EBE4, #8ECFC0, #2A7D6F, #0D3D3A)",
-                          }} />
-                          <span style={{ fontSize: 10, color: "#888" }}>High Severity</span>
-                        </div>
-                      </div>
-                    </div>
-                  </SectionCard>
+              <div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: "#0D3D3A", lineHeight: 1.2 }}>
+                  Sphinx EDA
                 </div>
-              );
-            })()}
+                <div style={{ fontSize: 13, color: "#888", marginTop: 4 }}>
+                  Exploratory data analysis across co-occurring drugs in matched cases
+                </div>
+              </div>
+              <button
+                onClick={() => navigate("/analysis")}
+                style={{
+                  background: "white",
+                  color: "#0D3D3A",
+                  border: "2px solid #0D3D3A",
+                  borderRadius: 10,
+                  padding: "10px 20px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  fontFamily: "DM Sans, sans-serif",
+                  transition: "all 0.2s",
+                }}
+                onMouseOver={e => { e.currentTarget.style.background = "#0D3D3A"; e.currentTarget.style.color = "white"; }}
+                onMouseOut={e => { e.currentTarget.style.background = "white"; e.currentTarget.style.color = "#0D3D3A"; }}
+              >
+                View System Analysis
+              </button>
+            </div>
 
             {/* Severity Distribution by Drug Pair */}
             {d.severityByPair && d.severityByPair.length > 0 && (
@@ -629,73 +567,6 @@ export default function RxGuardDashboard() {
                   <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: "#555" }}>{v.charAt(0).toUpperCase() + v.slice(1)}</span>} />
                   <Bar dataKey="male" fill="#2A7D6F" name="male" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="female" fill="#6BB5A8" name="female" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </SectionCard>
-          </div>
-        )}
-
-        {/* Retrieval Eval Comparison */}
-        {d.retrievalEval && d.retrievalEval.engines && (
-          <div style={{ marginTop: 28, marginBottom: 28 }}>
-            <SectionCard
-              title="Retrieval Engine Comparison"
-              subtitle={`Ground truth: ${d.retrievalEval.relevantCount} relevant cases for ${d.retrievalEval.drugPair[0].charAt(0).toUpperCase() + d.retrievalEval.drugPair[0].slice(1)} + ${d.retrievalEval.drugPair[1].charAt(0).toUpperCase() + d.retrievalEval.drugPair[1].slice(1)}`}
-            >
-              {/* Metrics Table */}
-              <div style={{ overflowX: "auto", marginBottom: 24 }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr style={{ borderBottom: "2px solid #f0f0f0" }}>
-                      {["Engine", "P@5", "P@10", "R@5", "R@10", "NDCG@5", "NDCG@10", "MRR"].map(h => (
-                        <th key={h} style={{ padding: "8px 12px", textAlign: h === "Engine" ? "left" : "right", fontSize: 11, color: "#aaa", fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {d.retrievalEval.engines.map(eng => (
-                      <tr key={eng.engine} style={{
-                        borderBottom: "1px solid #f5f5f5",
-                        background: eng.active ? "#eaf3f1" : "white",
-                      }}>
-                        <td style={{ padding: "10px 12px", fontSize: 13, fontWeight: 700, color: "#0D3D3A", fontFamily: "Space Mono, monospace" }}>
-                          {eng.engine}
-                          {eng.active && <span style={{ marginLeft: 8, background: "#2A7D6F", color: "white", borderRadius: 20, padding: "2px 8px", fontSize: 10, fontWeight: 600, fontFamily: "DM Sans, sans-serif" }}>ACTIVE</span>}
-                        </td>
-                        {["P@5", "P@10", "R@5", "R@10", "NDCG@5", "NDCG@10", "MRR"].map(m => (
-                          <td key={m} style={{ padding: "10px 12px", textAlign: "right", fontSize: 13, fontFamily: "Space Mono, monospace", color: "#333" }}>
-                            {eng.metrics[m] != null ? (eng.metrics[m] * 100).toFixed(1) + "%" : "—"}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Grouped Bar Chart */}
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart
-                  data={["P@5", "R@10", "NDCG@10", "MRR"].map(m => ({
-                    metric: m,
-                    V1: (d.retrievalEval.engines.find(e => e.engine === "V1")?.metrics[m] || 0),
-                    V2: (d.retrievalEval.engines.find(e => e.engine === "V2")?.metrics[m] || 0),
-                    V3: (d.retrievalEval.engines.find(e => e.engine === "V3")?.metrics[m] || 0),
-                    "V3+R": (d.retrievalEval.engines.find(e => e.engine === "V3+R")?.metrics[m] || 0),
-                  }))}
-                  margin={{ left: 0, right: 20, top: 8, bottom: 8 }}
-                >
-                  <XAxis dataKey="metric" tick={{ fontSize: 12, fill: "#555" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} domain={[0, 1]} tickFormatter={v => `${(v * 100).toFixed(0)}%`} />
-                  <Tooltip
-                    contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontSize: 12 }}
-                    formatter={(v, name) => [`${(v * 100).toFixed(1)}%`, name]}
-                  />
-                  <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: "#555" }}>{v}</span>} />
-                  <Bar dataKey="V1" fill="#0D3D3A" name="V1" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="V2" fill="#1A5C53" name="V2" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="V3" fill="#2A7D6F" name="V3" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="V3+R" fill="#8ECFC0" name="V3+R" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </SectionCard>
