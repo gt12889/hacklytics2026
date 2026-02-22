@@ -56,7 +56,29 @@ export default function SearchPage() {
       alignItems: "center",
       fontFamily: "DM Sans, sans-serif",
       padding: "40px 24px",
+      position: "relative",
     }}>
+      <Link
+        to="/"
+        style={{
+          position: "absolute",
+          top: 24,
+          left: 24,
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          color: "#0D3D3A",
+          textDecoration: "none",
+          fontSize: 14,
+          fontWeight: 600,
+          fontFamily: "DM Sans, sans-serif",
+          transition: "opacity 0.2s",
+        }}
+        onMouseOver={e => e.currentTarget.style.opacity = "0.6"}
+        onMouseOut={e => e.currentTarget.style.opacity = "1"}
+      >
+        <span style={{ fontSize: 24 }}>&larr;</span>
+      </Link>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }

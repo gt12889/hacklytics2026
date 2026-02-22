@@ -19,36 +19,44 @@ PAGE_LIMIT = 100          # max results per request (openFDA cap)
 MAX_SKIP = 26000          # openFDA caps skip at ~26000
 
 # Per-pair target: how many reports to try to pull per interaction pair
-REPORTS_PER_PAIR = 1000
+REPORTS_PER_PAIR = 200
+
+# ── Batch pipeline settings ─────────────────────────────────────────────────
+# How many pairs to fetch per run (keeps each run under ~5 minutes).
+# The pipeline automatically skips already-fetched pairs and appends new ones.
+PAIRS_PER_RUN = 5
 
 # ── Interaction pairs ────────────────────────────────────────────────────────
-# 50 high-risk drug interaction pairs chosen from blueprint test queries
-# + common clinically significant interactions.
-INTERACTION_PAIRS = [
-    # From test queries (Q1-Q10)
-    ("warfarin", "ibuprofen"),              # Q1: major bleeding
-    ("methotrexate", "ibuprofen"),          # Q2: renal failure
-    ("methotrexate", "naproxen"),           # Q2 variant
-    ("lithium", "lisinopril"),              # Q3: lithium toxicity
-    ("lithium", "enalapril"),               # Q3 variant
-    ("fluoxetine", "tramadol"),             # Q4: serotonin syndrome
-    ("sertraline", "tramadol"),             # Q4 variant
-    ("paroxetine", "tramadol"),             # Q4 variant
-    ("simvastatin", "clarithromycin"),      # Q5: rhabdomyolysis
-    ("simvastatin", "erythromycin"),        # Q5 variant
-    ("digoxin", "amiodarone"),              # Q9: digoxin toxicity
-    ("ciprofloxacin", "prednisone"),        # Q10: tendon rupture
-    ("levofloxacin", "prednisone"),         # Q10 variant
-    ("levofloxacin", "dexamethasone"),      # Q10 variant
-    ("spironolactone", "lisinopril"),       # Q8: hyperkalemia
-    ("spironolactone", "enalapril"),        # Q8 variant
-    # Brand name test coverage (Q11-14 = same pairs above)
-    ("atorvastatin", "clarithromycin"),     # Q13: Lipitor+Biaxin
-    # Demographic test coverage (Q19-20)
-    ("metformin", "lisinopril"),            # Q19
-    # Additional high-risk interactions
-    ("warfarin", "aspirin"),                # bleeding risk
-    ("warfarin", "naproxen"),              # bleeding risk
+# Priority pairs: these match the preset suggestion queries shown to users.
+# They are fetched FIRST so the app has data for the demo scenarios.
+PRIORITY_PAIRS = [
+    ("warfarin", "ibuprofen"),              # suggestion: bleeding risk
+    ("warfarin", "aspirin"),                # suggestion: bleeding risk
+    ("metformin", "lisinopril"),            # suggestion: renal/hypoglycemia
+    ("warfarin", "naproxen"),              # suggestion: bleeding risk
+    ("warfarin", "diclofenac"),            # suggestion: bleeding risk
+    ("fluoxetine", "tramadol"),             # suggestion: serotonin syndrome
+    ("simvastatin", "clarithromycin"),      # suggestion: rhabdomyolysis
+    ("lithium", "lisinopril"),              # suggestion: lithium toxicity
+    ("digoxin", "amiodarone"),              # suggestion: digoxin toxicity
+    ("ciprofloxacin", "prednisone"),        # suggestion: tendon rupture
+]
+
+# Full list: all high-risk interaction pairs for background loading.
+# Pipeline fetches PRIORITY_PAIRS first, then works through the rest.
+INTERACTION_PAIRS = PRIORITY_PAIRS + [
+    # Additional pairs (fetched after priority pairs are done)
+    ("methotrexate", "ibuprofen"),          # renal failure
+    ("methotrexate", "naproxen"),           # renal failure variant
+    ("lithium", "enalapril"),               # lithium toxicity variant
+    ("sertraline", "tramadol"),             # serotonin syndrome
+    ("paroxetine", "tramadol"),             # serotonin syndrome
+    ("simvastatin", "erythromycin"),        # rhabdomyolysis
+    ("levofloxacin", "prednisone"),         # tendon rupture
+    ("levofloxacin", "dexamethasone"),      # tendon rupture
+    ("spironolactone", "lisinopril"),       # hyperkalemia
+    ("spironolactone", "enalapril"),        # hyperkalemia
+    ("atorvastatin", "clarithromycin"),     # Lipitor+Biaxin
     ("warfarin", "celecoxib"),              # bleeding risk
     ("warfarin", "sertraline"),             # SSRI + anticoagulant
     ("warfarin", "fluoxetine"),             # SSRI + anticoagulant
@@ -60,15 +68,15 @@ INTERACTION_PAIRS = [
     ("cyclosporine", "methotrexate"),       # immunosuppression
     ("metformin", "furosemide"),            # lactic acidosis
     ("metformin", "enalapril"),             # hypoglycemia/renal
-    ("metformin", "ciprofloxacin"),         # Q16: blood sugar
-    ("insulin", "ciprofloxacin"),           # Q16 variant
-    ("insulin", "levofloxacin"),            # Q16 variant
+    ("metformin", "ciprofloxacin"),         # blood sugar
+    ("insulin", "ciprofloxacin"),           # blood sugar variant
+    ("insulin", "levofloxacin"),            # blood sugar variant
     ("atorvastatin", "erythromycin"),       # rhabdomyolysis
     ("rosuvastatin", "clarithromycin"),     # rhabdomyolysis
     ("citalopram", "tramadol"),             # serotonin syndrome
     ("escitalopram", "tramadol"),           # serotonin syndrome
-    ("phenelzine", "fluoxetine"),           # Q7: MAO+SSRI
-    ("phenelzine", "sertraline"),           # Q7 variant
+    ("phenelzine", "fluoxetine"),           # MAO+SSRI
+    ("phenelzine", "sertraline"),           # MAO+SSRI
     ("metoprolol", "verapamil"),            # bradycardia
     ("propranolol", "insulin"),             # masks hypoglycemia
     ("ibuprofen", "lisinopril"),            # reduced BP control

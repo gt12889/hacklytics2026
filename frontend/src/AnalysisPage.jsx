@@ -107,7 +107,7 @@ export default function AnalysisPage() {
 
         {/* Brand + Navigation */}
         <div style={{ marginBottom: 32, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 48, fontWeight: 700, color: "#0D3D3A", fontFamily: "Space Mono, monospace", letterSpacing: 4, textTransform: "uppercase" }}>RxGuard</span>
+          <span onClick={() => navigate("/home")} style={{ fontSize: 48, fontWeight: 700, color: "#0D3D3A", fontFamily: "Space Mono, monospace", letterSpacing: 4, textTransform: "uppercase", cursor: "pointer", transition: "opacity 0.2s" }} onMouseOver={e => e.currentTarget.style.opacity = "0.8"} onMouseOut={e => e.currentTarget.style.opacity = "1"}>RxGuard</span>
           <button
             onClick={() => navigate("/home")}
             style={{

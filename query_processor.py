@@ -24,6 +24,33 @@ DRUG_DICTIONARY = {
     'oxycodone', 'diazepam', 'hydrochlorothiazide',
 }
 
+# Brand name → generic name mapping (normalizes brand names during extraction)
+BRAND_TO_GENERIC = {
+    "coumadin": "warfarin", "jantoven": "warfarin",
+    "advil": "ibuprofen", "motrin": "ibuprofen",
+    "glucophage": "metformin", "lipitor": "atorvastatin",
+    "biaxin": "clarithromycin", "prozac": "fluoxetine",
+    "zoloft": "sertraline", "paxil": "paroxetine",
+    "ultram": "tramadol", "zocor": "simvastatin",
+    "lanoxin": "digoxin", "cordarone": "amiodarone",
+    "cipro": "ciprofloxacin", "crestor": "rosuvastatin",
+    "celexa": "citalopram", "lexapro": "escitalopram",
+    "nardil": "phenelzine", "inderal": "propranolol",
+    "valium": "diazepam", "oxycontin": "oxycodone",
+    "lasix": "furosemide", "aldactone": "spironolactone",
+    "deltasone": "prednisone", "decadron": "dexamethasone",
+    "calan": "verapamil", "cardizem": "diltiazem",
+    "aleve": "naproxen", "vasotec": "enalapril",
+    "voltaren": "diclofenac", "celebrex": "celecoxib",
+    "mobic": "meloxicam", "prilosec": "omeprazole",
+    "protonix": "pantoprazole", "prevacid": "lansoprazole",
+    "nexium": "esomeprazole", "lopressor": "metoprolol",
+    "norvasc": "amlodipine", "humulin": "insulin",
+    "novolin": "insulin", "flagyl": "metronidazole",
+    "levaquin": "levofloxacin", "neoral": "cyclosporine",
+    "sandimmune": "cyclosporine",
+}
+
 class QueryProcessor:
     def __init__(self, model_name: str = 'all-MiniLM-L6-v2'):
         """Initialize with sentence transformer model for embeddings"""
@@ -31,23 +58,32 @@ class QueryProcessor:
         
     def extract_drugs(self, query: str) -> List[str]:
         """
-        Extract drug names from query using regex and drug dictionary
-        Returns list of drug names found
+        Extract drug names from query using regex and drug dictionary.
+        Brand names are automatically normalized to their generic equivalents.
+        Returns list of generic drug names found.
         """
         query_lower = query.lower()
         found_drugs = []
-        
-        # Check against drug dictionary
+
+        # Check against generic drug dictionary
         for drug in DRUG_DICTIONARY:
-            if drug in query_lower:
+            if drug in query_lower and drug not in found_drugs:
                 found_drugs.append(drug)
-        
-        # Also try to find capitalized drug names
+
+        # Check against brand names and normalize to generic
+        for brand, generic in BRAND_TO_GENERIC.items():
+            if brand in query_lower and generic not in found_drugs:
+                found_drugs.append(generic)
+
+        # Also try to find capitalized drug names (handles PascalCase in text)
         words = re.findall(r'\b[A-Z][a-z]+\b', query)
         for word in words:
-            if word.lower() in DRUG_DICTIONARY and word.lower() not in found_drugs:
-                found_drugs.append(word.lower())
-        
+            w = word.lower()
+            if w in DRUG_DICTIONARY and w not in found_drugs:
+                found_drugs.append(w)
+            elif w in BRAND_TO_GENERIC and BRAND_TO_GENERIC[w] not in found_drugs:
+                found_drugs.append(BRAND_TO_GENERIC[w])
+
         return found_drugs
     
     def extract_patient_context(self, query: str) -> Dict[str, Optional[str]]:
