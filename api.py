@@ -27,6 +27,7 @@ from results_ranker import ResultsRanker
 from response_generator import ResponseGenerator
 from sample_data import get_sample_cases
 from data_models import FAERSCase
+from query_logger import QueryLogger
 from src.gemini_parser import parse_patient_text
 from eval_search import get_relevant_ids, compute_metrics, normalize_drug
 
@@ -127,6 +128,7 @@ def _precompute_retrieval_eval(all_cases: list[FAERSCase]) -> dict:
         engines_data.append({"engine": label, "metrics": avg_metrics})
 
     return {"queryCount": n_queries, "engines": engines_data}
+query_logger: Optional[QueryLogger] = None
 
 
 @app.on_event("startup")
@@ -134,6 +136,7 @@ def startup():
     global cases, query_processor, v1_search, v2_search, v3_search
     global ranker, response_gen, faers_df
     global precomputed_heatmap, precomputed_retrieval_eval
+    global ranker, response_gen, faers_df, query_logger
 
     print("[RxGuard] Initialising components ...")
 
@@ -164,6 +167,10 @@ def startup():
     # 4. Ranker + response generator
     ranker = ResultsRanker()
     response_gen = ResponseGenerator()
+
+    # 4b. Query logger
+    query_logger = QueryLogger()
+    print("[RxGuard] QueryLogger ready")
 
     # 5. Try loading FAERS parquet (optional)
     parquet_path = os.path.join(
@@ -659,33 +666,50 @@ def search(req: SearchRequest):
     if not query_processor:
         raise HTTPException(status_code=503, detail="Server still starting up")
 
+    # Initialize logger for this run
+    logger = query_logger
+    logger.start_run(req.query)
+
     try:
-        # 1. Process query
-        processed = query_processor.process_query(req.query)
+        # 1. Process query with timing
+        with logger.time_stage("query_processing"):
+            processed = query_processor.process_query(req.query)
+        logger.log_query_processing(processed)
+        
         drugs = processed["drugs"]
         context = processed["context"]
         embedding = processed["embedding"]
 
-        # 2. Run selected search engine
+        # 2. Run selected search engine with timing
         engine = req.engine.lower()
-        if engine == "v1":
-            results = v1_search.search(drugs, cases)
-        elif engine == "v2":
-            results = v2_search.search(req.query)
-        else:
-            results = v3_search.search(embedding)
+        with logger.time_stage("search"):
+            if engine == "v1":
+                results = v1_search.search(drugs, cases)
+                actual_engine = "V1"
+            elif engine == "v2":
+                results = v2_search.search(req.query)
+                actual_engine = "V2"
+            else:
+                results = v3_search.search(embedding)
+                actual_engine = "V3"
+        
+        logger.log_search(actual_engine, results)
 
-        # 3. Rank results
-        ranked = ranker.rank_results(results, context)
+        # 3. Rank results with timing
+        with logger.time_stage("ranking"):
+            ranked = ranker.rank_results(results, context)
+        logger.log_ranking(ranked)
 
-        # 4. Get risk score / level from response generator
-        resp = response_gen.format_full_response(
-            query=req.query,
-            drugs=drugs,
-            query_context=context,
-            ranked_results=ranked,
-            use_llm=True,
-        )
+        # 4. Get risk score / level from response generator with timing
+        with logger.time_stage("response_generation"):
+            resp = response_gen.format_full_response(
+                query=req.query,
+                drugs=drugs,
+                query_context=context,
+                ranked_results=ranked,
+                use_llm=True,
+            )
+        logger.log_response(resp)
 
         # 5. FAERS aggregation
         faers_stats = _aggregate_from_parquet(faers_df, drugs)
@@ -722,8 +746,21 @@ def search(req: SearchRequest):
         }
 
     except Exception as e:
+        # Log error before re-raising
+        if logger:
+            logger.log_error(
+                error_type=type(e).__name__,
+                error_message=str(e),
+                stage="main_processing"
+            )
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        # Save log file
+        if logger:
+            log_filepath = logger.save_run()
+            if log_filepath:
+                print(f"[RxGuard] Query logged to: {log_filepath}")
 
 
 @app.get("/api/health")

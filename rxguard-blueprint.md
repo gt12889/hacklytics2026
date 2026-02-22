@@ -80,8 +80,7 @@ The FDA FAERS database contains 20M+ adverse event reports dating back to 2004, 
    - Searches vectorized FAERS reports for semantically similar adverse event cases
    - Retrieves relevant drug label warnings from DailyMed
    - Scores risk based on historical outcome severity
-3. **Output**:
-   - **Risk Score** (1-10) with severity explanation
+3. **Output**
    - **Top matching FAERS cases** with narratives showing what happened to similar patients
    - **Specific warnings** extracted from drug labels
    - **Demographic context**: "In patients over 60 taking this combination, 73% of reported adverse events involved GI bleeding"
@@ -92,7 +91,6 @@ The FDA FAERS database contains 20M+ adverse event reports dating back to 2004, 
 ```
 QUERY: "65-year-old female on warfarin and metformin, doctor wants to add ibuprofen"
 
-⚠️ RISK SCORE: 8.7/10 — HIGH RISK
 
 PRIMARY INTERACTION: Warfarin + Ibuprofen (NSAID)
 - Risk: Major GI bleeding, increased INR

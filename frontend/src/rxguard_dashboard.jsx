@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area } from "recharts";
 
 // ── Mock Data ─────────────────────────────────────────────────────────────────
@@ -258,7 +258,9 @@ export default function RxGuardDashboard() {
 
         {/* Brand */}
         <div style={{ marginBottom: 32 }}>
-          <span style={{ fontSize: 48, fontWeight: 700, color: "#0D3D3A", fontFamily: "Space Mono, monospace", letterSpacing: 4, textTransform: "uppercase" }}>RxGuard</span>
+          <Link to="/home" style={{ textDecoration: "none", cursor: "pointer", display: "inline-block", transition: "opacity 0.2s" }} onMouseOver={e => e.currentTarget.style.opacity = "0.8"} onMouseOut={e => e.currentTarget.style.opacity = "1"}>
+            <span style={{ fontSize: 48, fontWeight: 700, color: "#0D3D3A", fontFamily: "Space Mono, monospace", letterSpacing: 4, textTransform: "uppercase" }}>RxGuard</span>
+          </Link>
         </div>
 
         {/* Header */}
@@ -330,11 +332,29 @@ export default function RxGuardDashboard() {
           <StatCard label="Life-Threatening" value={d.outcomes.lifeThreatening} sub={`${((d.outcomes.lifeThreatening/d.totalReports)*100).toFixed(1)}% of reports`} color="#2A7D6F" icon="⚡" delay={0.4} />
         </div>
 
-        {/* Clinical Summary */}
-        {d.summary && (
+        {/* Severity Distribution */}
+        {d.severityBreakdown && d.severityBreakdown.some(s => s.count > 0) && (
           <div style={{ marginBottom: 28 }}>
-            <SectionCard title="Clinical Summary">
-              <div style={{ fontSize: 13, color: "#333", lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{d.summary}</div>
+            <SectionCard title="Severity Distribution" subtitle="Risk profile for this drug pair">
+              <ResponsiveContainer width="100%" height={100}>
+                <BarChart
+                  data={[d.severityBreakdown.reduce((acc, s) => ({ ...acc, [s.severity]: s.count }), {})]}
+                  layout="vertical"
+                  margin={{ left: 0, right: 20, top: 8, bottom: 8 }}
+                >
+                  <XAxis type="number" tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey={() => ""} hide />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontSize: 12 }}
+                    formatter={(v, name) => [`${v} reports`, name]}
+                  />
+                  <Bar dataKey="death" stackId="sev" fill="#d32f2f" name="Death" radius={[4, 0, 0, 4]} />
+                  <Bar dataKey="life-threatening" stackId="sev" fill="#ff7f0e" name="Life-Threatening" />
+                  <Bar dataKey="hospitalization" stackId="sev" fill="#1f77b4" name="Hospitalization" />
+                  <Bar dataKey="other" stackId="sev" fill="#aec7e8" name="Other" radius={[0, 4, 4, 0]} />
+                  <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: "#555" }}>{v}</span>} />
+                </BarChart>
+              </ResponsiveContainer>
             </SectionCard>
           </div>
         )}
