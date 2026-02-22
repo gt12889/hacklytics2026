@@ -140,14 +140,18 @@ def startup():
 
     print("[RxGuard] Initialising components ...")
 
-    # 1. Load cases — prefer eval corpus (richer) over sample data
+    # 1. Load cases — merge eval corpus + sample data for maximum coverage
     try:
         from eval_search import build_eval_corpus
         cases = build_eval_corpus()
         print(f"[RxGuard] Loaded {len(cases)} eval corpus cases")
     except Exception:
-        cases = get_sample_cases()
-        print(f"[RxGuard] Loaded {len(cases)} sample cases (eval corpus unavailable)")
+        cases = []
+        print("[RxGuard] Eval corpus unavailable")
+    sample = get_sample_cases()
+    eval_ids = {c.case_id for c in cases}
+    cases.extend(c for c in sample if c.case_id not in eval_ids)
+    print(f"[RxGuard] Total corpus: {len(cases)} cases (eval + sample)")
 
     # 2. Query processor (loads sentence-transformer model)
     query_processor = QueryProcessor()
@@ -629,6 +633,7 @@ def _build_similar_cases(ranked_results: list, limit: int = 5) -> list[dict]:
                 case.outcome_severity, "other"
             ),
         })
+    similar.sort(key=lambda c: c["similarity"], reverse=True)
     return similar
 
 
