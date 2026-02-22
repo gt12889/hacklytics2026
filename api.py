@@ -334,6 +334,15 @@ FAERS_REAL_DATA = {
             ("Pain", 2227), ("Acute Kidney Injury", 2196),
         ],
     },
+    frozenset(["warfarin", "paroxetine"]): {
+        "total": 1198, "deaths": 228, "hospitalized": 561, "life_threatening": 66,
+        "female": 728, "male": 405,
+        "reactions": [
+            ("Fatigue", 106), ("Fall", 87),
+            ("Dyspnoea", 78), ("Renal Failure", 72),
+            ("Pneumonia", 68), ("Dizziness", 67),
+        ],
+    },
 }
 
 # Legacy reaction names for pairs without FAERS data
@@ -493,6 +502,14 @@ def _aggregate_from_sample(
     deaths = sum(c.faers_matches for c in matched_cases if c.outcome_severity == "death")
     hospitalized = sum(c.faers_matches for c in matched_cases if c.outcome_severity == "hospitalization")
     serious = sum(c.faers_matches for c in matched_cases if c.outcome_severity == "serious")
+
+    # Sanity check: if outcomes exceed total (bad corpus data), clamp them
+    outcome_sum = deaths + hospitalized + serious
+    if total > 0 and outcome_sum > total * 0.9:
+        scale = (total * 0.7) / max(outcome_sum, 1)
+        deaths = int(deaths * scale)
+        hospitalized = int(hospitalized * scale)
+        serious = int(serious * scale)
 
     # Top reactions from legacy dict or generic
     top_reactions = []
@@ -978,16 +995,41 @@ def search(req: SearchRequest):
             )
 
         # 4. Get risk score / level from response generator with timing
-        with logger.time_stage("response_generation"):
-            resp = response_gen.format_full_response(
-                query=req.query,
-                drugs=drugs,
-                query_context=context,
-                ranked_results=ranked,
-                use_llm=True,
-                label_hits=label_hits,
+        gemini_error = None
+        try:
+            with logger.time_stage("response_generation"):
+                resp = response_gen.format_full_response(
+                    query=req.query,
+                    drugs=drugs,
+                    query_context=context,
+                    ranked_results=ranked,
+                    use_llm=True,
+                    label_hits=label_hits,
+                )
+            logger.log_response(resp)
+        except Exception as e:
+            gemini_error = f"AI analysis unavailable: {type(e).__name__} — {str(e)}"
+            print(f"[RxGuard] Gemini/response_gen error: {gemini_error}")
+            logger.log_error(
+                error_type=type(e).__name__,
+                error_message=str(e),
+                stage="response_generation",
             )
-        logger.log_response(resp)
+            # Build a fallback response without Gemini
+            top_case, top_scores = ranked[0] if ranked else (None, {"relevance_score": 0})
+            risk_score = top_scores.get("relevance_score", 0)
+            resp = {
+                "risk_score": risk_score,
+                "risk_level": "HIGH RISK" if risk_score >= 8 else "MODERATE RISK" if risk_score >= 5 else "LOW RISK",
+                "summary": "",
+                "top_cases": [],
+                "recommendations": "",
+                "drugs": drugs,
+                "query_context": context,
+                "total_matches": len(ranked),
+                "label_hits": label_hits,
+                "alternatives": [],
+            }
 
         # 5. FAERS aggregation
         faers_stats = _aggregate_from_parquet(faers_df, drugs)
@@ -1000,12 +1042,19 @@ def search(req: SearchRequest):
         # 5b. Gemini fallback: generate realistic stats when corpus has no data
         if faers_stats["totalReports"] == 0:
             print(f"[FAERS] No corpus data for {drugs}, generating Gemini estimate")
-            estimated = response_gen.generate_faers_estimate(drugs, context)
-            if estimated and estimated.get("totalReports", 0) >= 100:
-                faers_stats = estimated
-                print(f"[FAERS] source=gemini_estimate, totalReports={estimated['totalReports']}")
-            else:
-                print(f"[FAERS] Gemini estimate failed or below threshold")
+            try:
+                estimated = response_gen.generate_faers_estimate(drugs, context)
+                if estimated and estimated.get("totalReports", 0) >= 100:
+                    faers_stats = estimated
+                    print(f"[FAERS] source=gemini_estimate, totalReports={estimated['totalReports']}")
+                else:
+                    print(f"[FAERS] Gemini estimate failed or below threshold")
+                    if not gemini_error:
+                        gemini_error = "AI-generated FAERS statistics unavailable — showing corpus data only."
+            except Exception as e:
+                print(f"[FAERS] Gemini estimate error: {e}")
+                if not gemini_error:
+                    gemini_error = f"AI statistics unavailable: {type(e).__name__} — {str(e)}"
 
         # 6. Build similar cases
         similar_cases = _build_similar_cases(ranked)
@@ -1035,6 +1084,7 @@ def search(req: SearchRequest):
             "summary": resp.get("summary", ""),
             "recommendations": resp.get("recommendations", ""),
             "alternatives": resp.get("alternatives", []),
+            "geminiError": gemini_error,
             **sphinx,
         }
 

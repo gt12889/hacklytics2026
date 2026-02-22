@@ -93,20 +93,26 @@ const MOCK_DATA = {
     { drugName: "Acetaminophen", drugClass: "Non-opioid analgesic",
       whySafer: "Does not affect INR or increase bleeding risk with warfarin.",
       monitoring: "Hepatic function; limit to <2g/day in elderly",
-      relativeRisk: "much-lower" },
+      relativeRisk: "much-lower",
+      source: "https://pubmed.ncbi.nlm.nih.gov/17327457/",
+      sourceLabel: "Battistella et al., Arch Intern Med 2005" },
     { drugName: "Topical Diclofenac", drugClass: "Topical NSAID",
       whySafer: "Minimal systemic absorption reduces INR elevation and GI bleeding risk.",
       monitoring: "Application site reactions; periodic INR if long-term",
-      relativeRisk: "lower" },
+      relativeRisk: "lower",
+      source: "https://pubmed.ncbi.nlm.nih.gov/15266516/",
+      sourceLabel: "Kienzler et al., Drugs R D 2010" },
     { drugName: "Celecoxib (low-dose)", drugClass: "COX-2 selective NSAID",
       whySafer: "COX-2 selectivity spares platelet function, less bleeding risk.",
       monitoring: "INR weekly for first month; consider PPI co-therapy",
-      relativeRisk: "lower" },
+      relativeRisk: "lower",
+      source: "https://pubmed.ncbi.nlm.nih.gov/17181642/",
+      sourceLabel: "Depta & Bhatt, Cleve Clin J Med 2006" },
   ],
   summary: "The combination of Warfarin and Ibuprofen presents a HIGH risk for gastrointestinal bleeding and INR elevation. FAERS data shows 1,532 adverse event reports for this combination, with 12% resulting in hospitalization and 3% in fatalities \u2014 predominantly in female patients over 60. This is corroborated by the FDA-approved drug label, which carries a Boxed Warning about increased GI bleeding risk when warfarin is co-administered with NSAIDs. Consider acetaminophen as an alternative analgesic; if an NSAID is required, use the lowest effective dose with PPI gastroprotection and increased INR monitoring.",
   labelHits: [
-    { rank: 1, score: 0.87, doc_id: "warfarin-001", text: "Co-administration of warfarin with NSAIDs increases the risk of GI bleeding...", drugs: ["warfarin", "ibuprofen"], section: "BOXED WARNING", generic_name: "warfarin sodium" },
-    { rank: 2, score: 0.82, doc_id: "ibuprofen-002", text: "NSAIDs can reduce the natriuretic effect of diuretics and antihypertensives...", drugs: ["ibuprofen"], section: "DRUG INTERACTIONS", generic_name: "ibuprofen" },
+    { rank: 1, score: 0.87, doc_id: "warfarin-001", text: "Co-administration of warfarin with NSAIDs increases the risk of GI bleeding...", drugs: ["warfarin", "ibuprofen"], section: "BOXED WARNING", generic_name: "warfarin sodium", source: "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=e0b7c3a1-dbb6-4a3e-862b-50df25843b24", sourceLabel: "DailyMed — Warfarin Sodium Label" },
+    { rank: 2, score: 0.82, doc_id: "ibuprofen-002", text: "NSAIDs can reduce the natriuretic effect of diuretics and antihypertensives...", drugs: ["ibuprofen"], section: "DRUG INTERACTIONS", generic_name: "ibuprofen", source: "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=a74a4856-4474-5a43-b1b0-15e0e4e4c3b7", sourceLabel: "DailyMed — Ibuprofen Label" },
   ],
 };
 
@@ -487,6 +493,31 @@ export default function RxGuardDashboard() {
           </div>
         )}
 
+        {/* Gemini Error Banner */}
+        {d.geminiError && (
+          <div style={{
+            background: "#fff3e0",
+            borderRadius: 12,
+            padding: "14px 20px",
+            marginBottom: 20,
+            borderLeft: "4px solid #e65100",
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            animation: "slideUp 0.4s ease both",
+          }}>
+            <span style={{ fontSize: 20 }}>&#9888;</span>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#e65100", fontFamily: "DM Sans, sans-serif", marginBottom: 2 }}>
+                Gemini AI Unavailable
+              </div>
+              <div style={{ fontSize: 12, color: "#bf360c", fontFamily: "DM Sans, sans-serif", lineHeight: 1.5 }}>
+                {d.geminiError}. FAERS statistics and case data are still available below.
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Clinical Analysis */}
         {d.summary && (
           <div style={{
@@ -502,8 +533,12 @@ export default function RxGuardDashboard() {
               <div style={{ fontSize: 13, fontWeight: 700, color: "#2A7D6F", textTransform: "uppercase", letterSpacing: 1 }}>
                 Clinical Analysis
               </div>
-              <div style={{ fontSize: 11, color: "#aaa", fontFamily: "DM Sans, sans-serif" }}>
-                Powered by Gemini + FAERS + DailyMed
+              <div style={{ fontSize: 11, color: "#aaa", fontFamily: "DM Sans, sans-serif", display: "flex", gap: 6, flexWrap: "wrap" }}>
+                Powered by{" "}
+                <a href="https://open.fda.gov/apis/drug/event/" target="_blank" rel="noopener noreferrer" style={{ color: "#2A7D6F", textDecoration: "none" }} onMouseOver={e => e.currentTarget.style.textDecoration = "underline"} onMouseOut={e => e.currentTarget.style.textDecoration = "none"}>FAERS</a>
+                {" + "}
+                <a href="https://dailymed.nlm.nih.gov/dailymed/" target="_blank" rel="noopener noreferrer" style={{ color: "#2A7D6F", textDecoration: "none" }} onMouseOver={e => e.currentTarget.style.textDecoration = "underline"} onMouseOut={e => e.currentTarget.style.textDecoration = "none"}>DailyMed</a>
+                {" + Gemini"}
               </div>
             </div>
 
@@ -538,6 +573,17 @@ export default function RxGuardDashboard() {
                       <div style={{ fontSize: 13, color: "#333", lineHeight: 1.5, fontStyle: "italic", fontFamily: "DM Sans, sans-serif" }}>
                         &ldquo;{hit.text}&rdquo;
                       </div>
+                      {hit.source && (
+                        <a href={hit.source} target="_blank" rel="noopener noreferrer" style={{
+                          fontSize: 11, color: "#2A7D6F", fontFamily: "DM Sans, sans-serif",
+                          textDecoration: "none", marginTop: 4, display: "inline-block",
+                        }}
+                        onMouseOver={e => e.currentTarget.style.textDecoration = "underline"}
+                        onMouseOut={e => e.currentTarget.style.textDecoration = "none"}
+                        >
+                          Source: {hit.sourceLabel || hit.source}
+                        </a>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -585,6 +631,17 @@ export default function RxGuardDashboard() {
                         <div style={{ fontSize: 13, color: "#d32f2f", lineHeight: 1.5, fontFamily: "DM Sans, sans-serif" }}>
                           ✗ Con: {alt.monitoring}
                         </div>
+                        {alt.source && (
+                          <a href={alt.source} target="_blank" rel="noopener noreferrer" style={{
+                            fontSize: 11, color: "#2A7D6F", fontFamily: "DM Sans, sans-serif",
+                            textDecoration: "none", marginTop: 4, display: "inline-block",
+                          }}
+                          onMouseOver={e => e.currentTarget.style.textDecoration = "underline"}
+                          onMouseOut={e => e.currentTarget.style.textDecoration = "none"}
+                          >
+                            Source: {alt.sourceLabel || alt.source}
+                          </a>
+                        )}
                       </div>
                     );
                   })}

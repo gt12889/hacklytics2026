@@ -381,7 +381,7 @@ export default function AnalysisPage() {
           animation: "slideUp 0.5s ease 0.3s both",
         }}>
           <div style={{ fontSize: 28, fontWeight: 700, color: "#0D3D3A", lineHeight: 1.2, marginBottom: 4 }}>
-            Try a Query
+            Logic Engine Analysis
           </div>
           <div style={{ fontSize: 13, color: "#888", marginBottom: 20 }}>
             Compare how all 4 retrieval engines perform on a single query
