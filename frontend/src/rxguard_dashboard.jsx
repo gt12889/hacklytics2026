@@ -481,13 +481,13 @@ export default function RxGuardDashboard() {
                 <div><span style={{ color: "#888" }}>Sex: </span><strong>{parsed.sex === 1 ? "Male" : parsed.sex === 2 ? "Female" : "Unknown"}</strong></div>
               )}
               {parsed.preexisting_conditions?.length > 0 && (
-                <div><span style={{ color: "#888" }}>Conditions: </span><strong>{parsed.preexisting_conditions.join(", ")}</strong></div>
+                <div><span style={{ color: "#888" }}>Conditions: </span><strong>{Array.isArray(parsed.preexisting_conditions) ? parsed.preexisting_conditions.join(", ") : String(parsed.preexisting_conditions)}</strong></div>
               )}
               {parsed.current_medications?.length > 0 && (
-                <div><span style={{ color: "#888" }}>Current Meds: </span><strong>{parsed.current_medications.join(", ")}</strong></div>
+                <div><span style={{ color: "#888" }}>Current Meds: </span><strong>{Array.isArray(parsed.current_medications) ? parsed.current_medications.join(", ") : String(parsed.current_medications)}</strong></div>
               )}
               {parsed.prescribed_medications?.length > 0 && (
-                <div><span style={{ color: "#888" }}>Prescribed: </span><strong>{parsed.prescribed_medications.join(", ")}</strong></div>
+                <div><span style={{ color: "#888" }}>Prescribed: </span><strong>{Array.isArray(parsed.prescribed_medications) ? parsed.prescribed_medications.join(", ") : String(parsed.prescribed_medications)}</strong></div>
               )}
             </div>
           </div>
