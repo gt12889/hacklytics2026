@@ -30,16 +30,16 @@ PAIRS_PER_RUN = 5
 # Priority pairs: these match the preset suggestion queries shown to users.
 # They are fetched FIRST so the app has data for the demo scenarios.
 PRIORITY_PAIRS = [
-    ("warfarin", "ibuprofen"),              # suggestion: bleeding risk
-    ("warfarin", "aspirin"),                # suggestion: bleeding risk
-    ("metformin", "lisinopril"),            # suggestion: renal/hypoglycemia
-    ("warfarin", "naproxen"),              # suggestion: bleeding risk
-    ("warfarin", "diclofenac"),            # suggestion: bleeding risk
-    ("fluoxetine", "tramadol"),             # suggestion: serotonin syndrome
-    ("simvastatin", "clarithromycin"),      # suggestion: rhabdomyolysis
-    ("lithium", "lisinopril"),              # suggestion: lithium toxicity
-    ("digoxin", "amiodarone"),              # suggestion: digoxin toxicity
-    ("ciprofloxacin", "prednisone"),        # suggestion: tendon rupture
+    ("warfarin", "ibuprofen"),              # #1 unsafe, most data (14 FAERS cases)
+    ("metformin", "lisinopril"),            # #2 moderate risk (11 FAERS cases)
+    ("warfarin", "aspirin"),                # #3 multi-drug (via warfarin+ibuprofen)
+    ("fluoxetine", "tramadol"),             # #4 unsafe, serotonin syndrome (13 cases)
+    ("digoxin", "amiodarone"),              # #5 unsafe, digoxin toxicity (12 cases)
+    ("warfarin", "naproxen"),              # bleeding risk
+    ("warfarin", "diclofenac"),            # bleeding risk
+    ("simvastatin", "clarithromycin"),      # rhabdomyolysis
+    ("lithium", "lisinopril"),              # lithium toxicity
+    ("ciprofloxacin", "prednisone"),        # tendon rupture
 ]
 
 # Full list: all high-risk interaction pairs for background loading.
@@ -103,7 +103,7 @@ VECTORDB_COLLECTION = "faers_reports"
 VECTORDB_LABELS_COLLECTION = "dailymed_labels"  # Separate namespace for drug labels
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 EMBEDDING_DIMENSION = 384
-VECTORDB_BATCH_SIZE = 500   # vectors per batch_upsert call
+VECTORDB_BATCH_SIZE = 1000  # vectors per batch_upsert call
 HNSW_EF_SEARCH = 100        # higher = more accurate search
 
 # ── FAERS fields of interest ─────────────────────────────────────────────────
