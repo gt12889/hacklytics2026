@@ -26,6 +26,7 @@ from response_generator import ResponseGenerator
 from sample_data import get_sample_cases
 from data_models import FAERSCase
 from query_logger import QueryLogger
+from src.gemini_parser import parse_patient_text
 
 # ── App setup ────────────────────────────────────────────────────────────────
 
@@ -423,6 +424,21 @@ def _build_similar_cases(ranked_results: list, limit: int = 5) -> list[dict]:
             ),
         })
     return similar
+
+
+# ── Parse endpoint ──────────────────────────────────────────────────────────
+
+class ParseRequest(BaseModel):
+    text: str
+
+@app.post("/api/parse")
+def parse(req: ParseRequest):
+    """Extract structured patient data from free-text using Gemini."""
+    try:
+        result = parse_patient_text(req.text)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ── Main endpoint ────────────────────────────────────────────────────────────

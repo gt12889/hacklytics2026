@@ -23,7 +23,7 @@ Text: \"{text}\" """
     for attempt in range(5):
         try:
             response = client.models.generate_content(
-                model="gemini-2.0-flash",
+                model="gemma-3-27b-it",
                 contents=prompt,
             )
             raw = response.text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
