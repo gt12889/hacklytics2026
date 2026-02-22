@@ -319,11 +319,6 @@ def display_results(response: dict, processed: dict):
         if top_cases := response.get('top_cases'):
             st.write(f"**Top Cases Retrieved**: {len(top_cases)}")
     
-    # Summary
-    st.markdown("---")
-    st.markdown("#### 📝 Clinical Summary")
-    st.info(response['summary'])
-    
     # Recommendations
     st.markdown("---")
     st.markdown("#### 💡 Recommendations")

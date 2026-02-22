@@ -191,7 +191,12 @@ function OutcomeBadge({ type }) {
 }
 
 function SimilarityBar({ value }) {
-  const color = value >= 85 ? "#4caf50" : value >= 75 ? "#ff9800" : "#ef5350";
+  // Gradient from light (#c4d9d6) to brand green (#2A7D6F)
+  const pct = Math.min(Math.max(value, 0), 100) / 100;
+  const r = Math.round(196 - 154 * pct);
+  const g = Math.round(217 - 92 * pct);
+  const b = Math.round(214 - 103 * pct);
+  const color = `rgb(${r},${g},${b})`;
   return (
     <div style={{
       display: "flex",
@@ -230,6 +235,7 @@ export default function RxGuardDashboard() {
   const navigate = useNavigate();
   const [expandedCase, setExpandedCase] = useState(null);
   const [hoveredBar, setHoveredBar] = useState(null);
+  const [hoveredCell, setHoveredCell] = useState(null);
   const d = location.state?.data || MOCK_DATA;
   const parsed = location.state?.parsed || null;
 
@@ -327,6 +333,33 @@ export default function RxGuardDashboard() {
           <StatCard label="Life-Threatening" value={d.outcomes.lifeThreatening} sub={`${((d.outcomes.lifeThreatening/d.totalReports)*100).toFixed(1)}% of reports`} color="#2A7D6F" icon="⚡" delay={0.4} />
         </div>
 
+        {/* Severity Distribution */}
+        {d.severityBreakdown && d.severityBreakdown.some(s => s.count > 0) && (
+          <div style={{ marginBottom: 28 }}>
+            <SectionCard title="Severity Distribution" subtitle="Risk profile for this drug pair">
+              <ResponsiveContainer width="100%" height={100}>
+                <BarChart
+                  data={[d.severityBreakdown.reduce((acc, s) => ({ ...acc, [s.severity]: s.count }), {})]}
+                  layout="vertical"
+                  margin={{ left: 0, right: 20, top: 8, bottom: 8 }}
+                >
+                  <XAxis type="number" tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey={() => ""} hide />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontSize: 12 }}
+                    formatter={(v, name) => [`${v} reports`, name]}
+                  />
+                  <Bar dataKey="death" stackId="sev" fill="#d32f2f" name="Death" radius={[4, 0, 0, 4]} />
+                  <Bar dataKey="life-threatening" stackId="sev" fill="#ff7f0e" name="Life-Threatening" />
+                  <Bar dataKey="hospitalization" stackId="sev" fill="#1f77b4" name="Hospitalization" />
+                  <Bar dataKey="other" stackId="sev" fill="#aec7e8" name="Other" radius={[0, 4, 4, 0]} />
+                  <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: "#555" }}>{v}</span>} />
+                </BarChart>
+              </ResponsiveContainer>
+            </SectionCard>
+          </div>
+        )}
+
         {/* Charts Row */}
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24, marginBottom: 28 }}>
 
@@ -386,6 +419,31 @@ export default function RxGuardDashboard() {
           </SectionCard>
         </div>
 
+        {/* Demographic Risk Profile */}
+        {d.demographicRisk && d.demographicRisk.length > 0 && (
+          <div style={{ marginBottom: 28 }}>
+            <SectionCard title="Demographic Risk Profile" subtitle="Mean severity by age group and sex for this drug pair">
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={d.demographicRisk} margin={{ left: 0, right: 20, top: 8, bottom: 8 }}>
+                  <XAxis dataKey="ageGroup" tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} label={{ value: "Mean Severity", angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#aaa" } }} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontSize: 12 }}
+                    formatter={(v, name, props) => {
+                      const countKey = name + "Count";
+                      const count = props.payload[countKey];
+                      return [`${v.toFixed(2)} (n=${count})`, name.charAt(0).toUpperCase() + name.slice(1)];
+                    }}
+                  />
+                  <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: "#555" }}>{v.charAt(0).toUpperCase() + v.slice(1)}</span>} />
+                  <Bar dataKey="male" fill="#1f77b4" name="male" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="female" fill="#e377c2" name="female" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </SectionCard>
+          </div>
+        )}
+
         {/* Similar Cases Table */}
         <SectionCard title="Most Similar Patient Cases" subtitle="Ranked by semantic similarity to your patient profile">
           <div style={{ overflowX: "auto" }}>
@@ -434,6 +492,139 @@ export default function RxGuardDashboard() {
             </table>
           </div>
         </SectionCard>
+
+        {/* ── Sphinx EDA Section ─────────────────────────────────────────── */}
+        {(d.heatmap || (d.severityByPair && d.severityByPair.length > 0)) && (
+          <>
+            <div style={{
+              borderTop: "2px solid #c4d9d6",
+              marginTop: 40,
+              marginBottom: 28,
+              paddingTop: 28,
+            }}>
+              <div style={{ fontSize: 28, fontWeight: 700, color: "#0D3D3A", lineHeight: 1.2 }}>
+                Sphinx EDA
+              </div>
+              <div style={{ fontSize: 13, color: "#888", marginTop: 4 }}>
+                Exploratory data analysis across co-occurring drugs in matched cases
+              </div>
+            </div>
+
+            {/* Drug Co-occurrence Heatmap */}
+            {d.heatmap && (() => {
+              const { drugs, matrix } = d.heatmap;
+              const n = drugs.length;
+              const cellSize = Math.max(28, Math.min(40, 700 / n));
+              const labelWidth = 100;
+
+              const severityColor = (val) => {
+                if (val == null) return "#f5f5f5";
+                const t = Math.min(val / 4, 1);
+                const r = Math.round(255 * Math.min(1, t * 2));
+                const g = Math.round(255 * Math.max(0, 1 - t * 1.5));
+                const b = 0;
+                return `rgb(${r},${g},${b})`;
+              };
+
+              return (
+                <div style={{ marginBottom: 28 }}>
+                  <SectionCard title="Drug Co-occurrence Heatmap" subtitle="Color = mean severity for this drug pair">
+                    <div style={{ overflowX: "auto", paddingTop: 8 }}>
+                      <div style={{ display: "inline-block" }}>
+                        {/* X-axis labels */}
+                        <div style={{ display: "flex", marginLeft: labelWidth }}>
+                          {drugs.map((drug, i) => (
+                            <div key={i} style={{
+                              width: cellSize, textAlign: "center", fontSize: 9,
+                              fontWeight: 600, color: "#555",
+                              transform: "rotate(-45deg)", transformOrigin: "center bottom",
+                              whiteSpace: "nowrap", height: 60, display: "flex",
+                              alignItems: "flex-end", justifyContent: "center",
+                            }}>{drug}</div>
+                          ))}
+                        </div>
+                        {/* Rows */}
+                        {matrix.map((row, ri) => (
+                          <div key={ri} style={{ display: "flex", alignItems: "center" }}>
+                            <div style={{
+                              width: labelWidth, fontSize: 10, fontWeight: 600,
+                              color: "#555", textAlign: "right", paddingRight: 6,
+                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                            }}>{drugs[ri]}</div>
+                            {row.map((val, ci) => (
+                              <div
+                                key={ci}
+                                style={{
+                                  width: cellSize, height: cellSize,
+                                  background: ri === ci ? "#e0e0e0" : severityColor(val),
+                                  border: "1px solid #fff",
+                                  borderRadius: 2,
+                                  cursor: val != null && ri !== ci ? "pointer" : "default",
+                                  position: "relative",
+                                }}
+                                onMouseEnter={() => val != null && ri !== ci && setHoveredCell({ ri, ci, val })}
+                                onMouseLeave={() => setHoveredCell(null)}
+                              >
+                                {hoveredCell && hoveredCell.ri === ri && hoveredCell.ci === ci && (
+                                  <div style={{
+                                    position: "absolute", bottom: "110%", left: "50%",
+                                    transform: "translateX(-50%)", background: "#0D3D3A",
+                                    color: "white", padding: "4px 8px", borderRadius: 6,
+                                    fontSize: 11, whiteSpace: "nowrap", zIndex: 10,
+                                    pointerEvents: "none",
+                                    boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                                  }}>
+                                    {drugs[ri]} + {drugs[ci]}: {val.toFixed(2)}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                        {/* Legend */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, marginLeft: labelWidth }}>
+                          <span style={{ fontSize: 10, color: "#888" }}>Low</span>
+                          <div style={{
+                            width: 120, height: 10, borderRadius: 4,
+                            background: "linear-gradient(to right, rgb(0,255,0), rgb(255,255,0), rgb(255,128,0), rgb(255,0,0))",
+                          }} />
+                          <span style={{ fontSize: 10, color: "#888" }}>High Severity</span>
+                        </div>
+                      </div>
+                    </div>
+                  </SectionCard>
+                </div>
+              );
+            })()}
+
+            {/* Severity Distribution by Drug Pair */}
+            {d.severityByPair && d.severityByPair.length > 0 && (
+              <div style={{ marginBottom: 28 }}>
+                <SectionCard title="Severity Distribution by Drug Pair" subtitle="Top 15 interaction pairs for this search">
+                  <ResponsiveContainer width="100%" height={Math.max(400, d.severityByPair.length * 36)}>
+                    <BarChart
+                      data={d.severityByPair}
+                      layout="vertical"
+                      margin={{ left: 140, right: 20, top: 8, bottom: 8 }}
+                    >
+                      <XAxis type="number" tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} />
+                      <YAxis type="category" dataKey="pair" tick={{ fontSize: 11, fill: "#555" }} axisLine={false} tickLine={false} width={140} />
+                      <Tooltip
+                        contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontSize: 12 }}
+                        formatter={(v, name) => [`${v} reports`, name]}
+                      />
+                      <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: "#555" }}>{v}</span>} />
+                      <Bar dataKey="death" stackId="sev" fill="#d32f2f" name="Death" radius={[0, 0, 0, 0]} />
+                      <Bar dataKey="lifeThreatening" stackId="sev" fill="#ff7f0e" name="Life-Threatening" />
+                      <Bar dataKey="hospitalization" stackId="sev" fill="#1f77b4" name="Hospitalization" />
+                      <Bar dataKey="other" stackId="sev" fill="#aec7e8" name="Other" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </SectionCard>
+              </div>
+            )}
+          </>
+        )}
 
       </div>
     </div>
