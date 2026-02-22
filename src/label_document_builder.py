@@ -32,6 +32,7 @@ def build_label_chunk(
     label: dict,
     section: str,
     content: str,
+    index: int = 0,
 ) -> dict:
     """Build a single document chunk for a label section."""
     generic = label.get("generic_name", label.get("drug_name", "unknown"))
@@ -40,8 +41,10 @@ def build_label_chunk(
     drugs_str = f"{generic}" + (f" ({brand_str})" if brand_str else "")
 
     text = f"Drug: {drugs_str}. Section: {section}. {_sanitize_text(content, 3000)}"
+    base_id = f"{label.get('id', '')}_{section}".replace(" ", "_")
+    doc_id = f"{base_id}_{index}" if index else base_id
     return {
-        "doc_id": f"{label.get('id', '')}_{section}",
+        "doc_id": doc_id,
         "text": text,
         "drugs": [generic] + (brand[:2] if brand else []),
         "section": section,
@@ -85,10 +88,10 @@ def build_label_documents(labels: list[dict] | None = None) -> pd.DataFrame:
             for i, content in enumerate(items):
                 if not content or not str(content).strip():
                     continue
-                chunk = build_label_chunk(label, section_name, str(content))
+                chunk = build_label_chunk(label, section_name, str(content), index=i)
                 cid = chunk["doc_id"]
                 if cid in seen_ids:
-                    cid = f"{cid}_{i}"
+                    cid = f"{cid}_{len(seen_ids)}"
                     chunk["doc_id"] = cid
                 seen_ids.add(cid)
                 chunks.append(chunk)

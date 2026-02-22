@@ -41,16 +41,6 @@ The app will open in your browser at `http://localhost:8501`
    55-year-old female on warfarin, needs aspirin for heart protection
    ```
 
-## 🔍 Understanding the Results
-
-- **Risk Score (1-10)**: Overall risk assessment
-  - 8.0-10.0: 🔴 HIGH RISK
-  - 5.0-7.9: 🟠 MODERATE RISK
-  - 3.0-4.9: 🟡 LOW-MODERATE RISK
-  - 1.0-2.9: 🟢 LOW RISK
-
-- **Similar Cases**: Retrieved from FAERS database with similarity scores
-- **Recommendations**: Clinical guidance based on findings
 
 ## 🛠️ Troubleshooting
 
