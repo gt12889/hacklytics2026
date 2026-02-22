@@ -1,6 +1,6 @@
 /* eslint-disable react/no-unknown-property */
 import * as THREE from 'three';
-import { useRef, useState, useEffect, memo } from 'react';
+import { useRef, useState, useEffect, useCallback, memo } from 'react';
 import { Canvas, createPortal, useFrame, useThree } from '@react-three/fiber';
 import {
   useFBO,
@@ -26,9 +26,34 @@ export default function FluidGlass({
 }) {
   const Wrapper = mode === 'bar' ? Bar : mode === 'cube' ? Cube : Lens;
   const rawOverrides = mode === 'bar' ? barProps : mode === 'cube' ? cubeProps : lensProps;
+  const [contextLost, setContextLost] = useState(false);
+
+  const handleCreated = useCallback(({ gl }) => {
+    const canvas = gl.domElement;
+    const onLost = (e) => {
+      e.preventDefault();
+      setContextLost(true);
+    };
+    const onRestored = () => {
+      setContextLost(false);
+    };
+    canvas.addEventListener('webglcontextlost', onLost);
+    canvas.addEventListener('webglcontextrestored', onRestored);
+  }, []);
+
+  // If context is lost, render a static colored div instead of crashing
+  if (contextLost) {
+    return <div style={{ width: '100%', height: '100%', background: bgColor }} />;
+  }
 
   return (
-    <Canvas camera={{ position: [0, 0, 20], fov: 15 }} gl={{ alpha: true }} style={{ background: 'transparent', pointerEvents: 'none' }}>
+    <Canvas
+      camera={{ position: [0, 0, 20], fov: 15 }}
+      gl={{ alpha: true, powerPreference: 'low-power', antialias: false }}
+      style={{ background: 'transparent', pointerEvents: 'none' }}
+      onCreated={handleCreated}
+      frameloop="always"
+    >
       <Wrapper modeProps={rawOverrides} bgColor={bgColor}>
         {children}
         <Preload />
@@ -53,6 +78,8 @@ const ModeWrapper = memo(function ModeWrapper({
   const { viewport: vp } = useThree();
   const [scene] = useState(() => new THREE.Scene());
   const geoWidthRef = useRef(1);
+  const bgColorRef = useRef(bgColor);
+  bgColorRef.current = bgColor;
 
   useEffect(() => {
     const geo = nodes[geometryKey]?.geometry;
@@ -64,6 +91,10 @@ const ModeWrapper = memo(function ModeWrapper({
 
   useFrame((state, delta) => {
     const { gl, viewport, pointer, camera } = state;
+
+    // Guard against lost context
+    if (gl.getContext().isContextLost()) return;
+
     const v = viewport.getCurrentViewport(camera, [0, 0, 15]);
 
     const destX = followPointer ? (pointer.x * v.width) / 2 : 0;
@@ -80,9 +111,8 @@ const ModeWrapper = memo(function ModeWrapper({
     gl.render(scene, camera);
     gl.setRenderTarget(null);
 
-    // Background color
-    const c = new THREE.Color(bgColor);
-    gl.setClearColor(c, 1);
+    // Background color — use ref to avoid creating new Color every frame
+    gl.setClearColor(new THREE.Color(bgColorRef.current), 1);
   });
 
   const { scale, ior, thickness, anisotropy, chromaticAberration, ...extraMat } = modeProps;

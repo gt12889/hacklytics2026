@@ -2,7 +2,7 @@ import { useState, useEffect, Fragment } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area } from "recharts";
 
-// ── Mock Data ─────────────────────────────────────────────────────────────────
+// ── Hardcoded example: Paroxetine + Warfarin interaction for 83yo F with COPD ──
 const MOCK_DATA = {
   query: {
     currentMed: "Warfarin",
@@ -12,82 +12,62 @@ const MOCK_DATA = {
     conditions: "COPD",
   },
   riskScore: 9,
-  totalReports: 243,
+  totalReports: 1689,
   outcomes: {
-    deaths: 18,
-    hospitalized: 97,
-    lifeThreatening: 34,
+    deaths: 51,
+    hospitalized: 674,
+    lifeThreatening: 118,
   },
   topReactions: [
-    { name: "INR increased", count: 68 },
-    { name: "Haemorrhage", count: 52 },
-    { name: "Epistaxis", count: 41 },
-    { name: "GI haemorrhage", count: 37 },
-    { name: "Ecchymosis", count: 29 },
-    { name: "Cerebral haemorrhage", count: 16 },
+    { name: "INR increased", count: 446 },
+    { name: "Haemorrhage", count: 338 },
+    { name: "Epistaxis", count: 261 },
+    { name: "GI haemorrhage", count: 219 },
+    { name: "Ecchymosis", count: 178 },
+    { name: "Cerebral haemorrhage", count: 97 },
   ],
   sexSplit: [
     { name: "Female", value: 63 },
     { name: "Male", value: 37 },
   ],
   ageDistribution: [
-    { range: "18-30", count: 3 },
-    { range: "31-45", count: 9 },
-    { range: "46-60", count: 28 },
-    { range: "61-70", count: 54 },
-    { range: "71-80", count: 87 },
-    { range: "81+", count: 62 },
+    { range: "18-30", count: 17 },
+    { range: "31-45", count: 61 },
+    { range: "46-60", count: 196 },
+    { range: "61-70", count: 367 },
+    { range: "71-80", count: 618 },
+    { range: "81+", count: 430 },
   ],
   similarCases: [
     {
-      id: 1,
-      age: 81,
-      sex: "Female",
+      id: 1, age: 81, sex: "Female",
       drugs: "Warfarin, Paroxetine, Lisinopril",
       reactions: "INR increased, GI haemorrhage, Anaemia",
-      outcome: "Hospitalized",
-      similarity: 92,
-      outcomeType: "hospitalized",
+      outcome: "Hospitalized", similarity: 92, outcomeType: "hospitalized",
     },
     {
-      id: 2,
-      age: 85,
-      sex: "Female",
+      id: 2, age: 85, sex: "Female",
       drugs: "Warfarin, Paroxetine",
       reactions: "Cerebral haemorrhage, INR increased",
-      outcome: "Fatal",
-      similarity: 88,
-      outcomeType: "death",
+      outcome: "Fatal", similarity: 88, outcomeType: "death",
     },
     {
-      id: 3,
-      age: 79,
-      sex: "Female",
+      id: 3, age: 79, sex: "Female",
       drugs: "Warfarin, Paroxetine, Omeprazole",
       reactions: "Haemorrhage, Ecchymosis, Epistaxis",
-      outcome: "Hospitalized",
-      similarity: 85,
-      outcomeType: "hospitalized",
+      outcome: "Hospitalized", similarity: 85, outcomeType: "hospitalized",
     },
     {
-      id: 4,
-      age: 82,
-      sex: "Female",
+      id: 4, age: 82, sex: "Female",
       drugs: "Warfarin, Paroxetine, Amlodipine",
       reactions: "INR increased, Haemorrhage, Dizziness",
-      outcome: "Life-threatening",
-      similarity: 81,
-      outcomeType: "lifethreat",
+      outcome: "Life-threatening", similarity: 81, outcomeType: "lifethreat",
     },
     {
-      id: 5,
-      age: 77,
-      sex: "Female",
+      id: 5, age: 77, sex: "Female",
       drugs: "Warfarin, Paroxetine",
       reactions: "Epistaxis, Ecchymosis, INR increased",
-      outcome: "Hospitalized",
-      similarity: 78,
-      outcomeType: "hospitalized",
+      outcome: "Hospitalized", similarity: 78, outcomeType: "hospitalized",
     },
   ],
   alternatives: [
@@ -110,7 +90,7 @@ const MOCK_DATA = {
       source: "https://pubmed.ncbi.nlm.nih.gov/10071079/",
       sourceLabel: "Anttila & Leinonen, Int Clin Psychopharmacol 1999" },
   ],
-  summary: "The combination of **Warfarin** and **Paroxetine** presents a **HIGH** risk for bleeding complications. Paroxetine is a potent inhibitor of CYP2C9, the primary enzyme responsible for warfarin metabolism, which can lead to significantly elevated INR and increased bleeding risk.\n\nFAERS data shows **243 adverse event reports** for this combination, with **40% resulting in hospitalization** and **7.4% in fatalities** \u2014 predominantly in elderly female patients over 70. The risk is particularly elevated in patients aged 81+ with comorbidities such as COPD.\n\n**Key concerns for this patient:**\n- Age 83 places her in the highest-risk demographic for warfarin-SSRI bleeding events\n- COPD may require concomitant medications that further elevate bleeding risk\n- Paroxetine\u2019s strong CYP2C9 inhibition can raise warfarin levels by 30\u201350%\n\n**Recommendation:** Strongly consider **mirtazapine** or **sertraline** as alternatives. If paroxetine is clinically necessary, reduce warfarin dose by 25\u201330%, check INR within 3\u20135 days, and monitor weekly for the first month.",
+  summary: "The combination of **Warfarin** and **Paroxetine** presents a **HIGH** risk for bleeding complications. Paroxetine is a potent inhibitor of CYP2C9, the primary enzyme responsible for warfarin metabolism, which can lead to significantly elevated INR and increased bleeding risk.\n\nFAERS data shows **1,689 adverse event reports** for this combination, with **40% resulting in hospitalization**, **3% in fatalities**, and **7% classified as life-threatening** \u2014 predominantly in elderly female patients over 70. The risk is particularly elevated in patients aged 81+ with comorbidities such as COPD.\n\n**Key concerns for this patient:**\n- Age 83 places her in the highest-risk demographic for warfarin-SSRI bleeding events\n- COPD may require concomitant medications that further elevate bleeding risk\n- Paroxetine\u2019s strong CYP2C9 inhibition can raise warfarin levels by 30\u201350%\n\n**Recommendation:** Strongly consider **mirtazapine** or **sertraline** as alternatives. If paroxetine is clinically necessary, reduce warfarin dose by 25\u201330%, check INR within 3\u20135 days, and monitor weekly for the first month.",
   labelHits: [
     { rank: 1, score: 0.91, doc_id: "warfarin-003", text: "Drugs that inhibit CYP2C9 (e.g., paroxetine, fluconazole) may increase the anticoagulant effect of warfarin by increasing warfarin plasma concentrations. Close monitoring of INR is recommended when starting or stopping CYP2C9 inhibitors.", drugs: ["warfarin", "paroxetine"], section: "DRUG INTERACTIONS", generic_name: "warfarin sodium", source: "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=e0b7c3a1-dbb6-4a3e-862b-50df25843b24", sourceLabel: "DailyMed \u2014 Warfarin Sodium Label" },
     { rank: 2, score: 0.84, doc_id: "paroxetine-001", text: "Drugs that interfere with hemostasis (including warfarin): Serotonin release by platelets plays an important role in hemostasis. Co-administration of paroxetine with warfarin may result in increased bleeding.", drugs: ["paroxetine", "warfarin"], section: "WARNINGS AND PRECAUTIONS", generic_name: "paroxetine hydrochloride", source: "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=584c6299-faf8-42de-9e2c-25a56ab7cd80", sourceLabel: "DailyMed \u2014 Paroxetine HCl Label" },
@@ -119,8 +99,8 @@ const MOCK_DATA = {
   pipeline: {
     stages: [
       { name: "NLP Processing", key: "query_processing", duration_ms: 118.7, detail: "Extracted 2 drugs, parsed age/sex/conditions", tech: "spaCy + regex" },
-      { name: "Vector Search", key: "search", duration_ms: 201.4, detail: "V3 engine, 38 raw results from 243 cases", tech: "all-MiniLM-L6-v2" },
-      { name: "Results Ranking", key: "ranking", duration_ms: 39.8, detail: "Ranked 38 cases by similarity \u00d7 severity \u00d7 demographics", tech: "Multi-signal ranker" },
+      { name: "Vector Search", key: "search", duration_ms: 201.4, detail: "V3 engine, 48 raw results from 1,689 cases", tech: "all-MiniLM-L6-v2" },
+      { name: "Results Ranking", key: "ranking", duration_ms: 39.8, detail: "Ranked 48 cases by similarity \u00d7 severity \u00d7 demographics", tech: "Multi-signal ranker" },
       { name: "DailyMed Labels", key: "label_search", duration_ms: 387.2, detail: "Found 2 FDA label matches (DRUG INTERACTIONS, WARNINGS)", tech: "Semantic label search" },
       { name: "Gemini Analysis", key: "response_generation", duration_ms: 3124.6, detail: "Generated clinical summary + 3 safer alternatives", tech: "Gemini 2.5 Flash" },
     ],
@@ -128,8 +108,8 @@ const MOCK_DATA = {
     engine_used: "V3",
     drugs_extracted: ["warfarin", "paroxetine"],
     embedding_dim: 384,
-    cases_searched: 243,
-    cases_ranked: 38,
+    cases_searched: 1689,
+    cases_ranked: 48,
   },
 };
 
@@ -529,8 +509,9 @@ export default function RxGuardDashboard() {
   const navigate = useNavigate();
   const [expandedCase, setExpandedCase] = useState(null);
   const [hoveredBar, setHoveredBar] = useState(null);
-  const d = location.state?.data || MOCK_DATA;
-  const parsed = location.state?.parsed || {
+  // Always use hardcoded example data for demo
+  const d = MOCK_DATA;
+  const parsed = {
     age: 83,
     sex: 2,
     preexisting_conditions: ["COPD"],

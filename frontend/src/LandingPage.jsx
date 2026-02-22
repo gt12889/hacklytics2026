@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense, Component } from "react";
 import { useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -8,6 +8,16 @@ import "swiper/css/pagination";
 import "swiper/css/effect-coverflow";
 import "swiper/css/navigation";
 import FluidGlass from "./FluidGlass";
+
+// ── WebGL Error Boundary (graceful fallback if 3D context crashes) ────────
+class WebGLBoundary extends Component {
+  state = { failed: false };
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() {
+    if (this.state.failed) return <div style={{ width: "100%", height: "100%", background: this.props.bg || "#E8EBE4" }} />;
+    return this.props.children;
+  }
+}
 
 // ── Scroll Reveal Hook ───────────────────────────────────────────────────────
 function useScrollReveal() {
@@ -371,19 +381,21 @@ export default function LandingPage() {
       >
         {/* FluidGlass fills entire section background */}
         <div style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" }}>
-          <Suspense fallback={<div style={{ width: "100%", height: "100%", background: "#E8EBE4" }} />}>
-            <FluidGlass
-              mode="lens"
-              bgColor="#E8EBE4"
-              lensProps={{
-                scale: 0.25,
-                ior: 1.15,
-                thickness: 5,
-                chromaticAberration: 0.1,
-                anisotropy: 0.01,
-              }}
-            />
-          </Suspense>
+          <WebGLBoundary bg="#E8EBE4">
+            <Suspense fallback={<div style={{ width: "100%", height: "100%", background: "#E8EBE4" }} />}>
+              <FluidGlass
+                mode="lens"
+                bgColor="#E8EBE4"
+                lensProps={{
+                  scale: 0.25,
+                  ior: 1.15,
+                  thickness: 5,
+                  chromaticAberration: 0.1,
+                  anisotropy: 0.01,
+                }}
+              />
+            </Suspense>
+          </WebGLBoundary>
         </div>
 
         {/* Content floats above the glass */}
