@@ -2,6 +2,142 @@ import { useState, useEffect, Fragment } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area } from "recharts";
 
+// ── Inline SVG Icons (Lucide-style, stroke-only) ────────────────────────────
+const IconUser = ({ size = 18, color = "#0D3D3A" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </svg>
+);
+
+const IconStethoscope = ({ size = 18, color = "#0D3D3A" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6 6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3" />
+    <path d="M8 15v1a6 6 0 0 0 6 6 6 6 0 0 0 6-6v-4" />
+    <circle cx="20" cy="10" r="2" />
+  </svg>
+);
+
+const IconFileText = ({ size = 18, color = "#0D3D3A" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="16" y1="13" x2="8" y2="13" />
+    <line x1="16" y1="17" x2="8" y2="17" />
+    <line x1="10" y1="9" x2="8" y2="9" />
+  </svg>
+);
+
+const IconAlertTriangle = ({ size = 18, color = "#0D3D3A" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+    <line x1="12" y1="9" x2="12" y2="13" />
+    <line x1="12" y1="17" x2="12.01" y2="17" />
+  </svg>
+);
+
+const IconBuilding = ({ size = 18, color = "#0D3D3A" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+    <rect x="4" y="2" width="16" height="20" rx="2" ry="2" />
+    <path d="M9 22v-4h6v4" />
+    <line x1="8" y1="6" x2="8" y2="6.01" />
+    <line x1="16" y1="6" x2="16" y2="6.01" />
+    <line x1="12" y1="6" x2="12" y2="6.01" />
+    <line x1="8" y1="10" x2="8" y2="10.01" />
+    <line x1="16" y1="10" x2="16" y2="10.01" />
+    <line x1="12" y1="10" x2="12" y2="10.01" />
+    <line x1="8" y1="14" x2="8" y2="14.01" />
+    <line x1="16" y1="14" x2="16" y2="14.01" />
+    <line x1="12" y1="14" x2="12" y2="14.01" />
+  </svg>
+);
+
+const IconAlertCircle = ({ size = 18, color = "#0D3D3A" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="8" x2="12" y2="12" />
+    <line x1="12" y1="16" x2="12.01" y2="16" />
+  </svg>
+);
+
+const IconInfo = ({ size = 18, color = "#0D3D3A" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="16" x2="12" y2="12" />
+    <line x1="12" y1="8" x2="12.01" y2="8" />
+  </svg>
+);
+
+const IconShieldAlert = ({ size = 18, color = "#0D3D3A" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    <line x1="12" y1="8" x2="12" y2="12" />
+    <line x1="12" y1="16" x2="12.01" y2="16" />
+  </svg>
+);
+
+const IconFileCheck = ({ size = 18, color = "#0D3D3A" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+    <polyline points="14 2 14 8 20 8" />
+    <path d="M9 15l2 2 4-4" />
+  </svg>
+);
+
+const IconShieldCheck = ({ size = 18, color = "#0D3D3A" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    <path d="M9 12l2 2 4-4" />
+  </svg>
+);
+
+const IconActivity = ({ size = 18, color = "#0D3D3A" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+  </svg>
+);
+
+const IconUsers = ({ size = 18, color = "#0D3D3A" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+  </svg>
+);
+
+const IconCalendar = ({ size = 18, color = "#0D3D3A" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+    <line x1="16" y1="2" x2="16" y2="6" />
+    <line x1="8" y1="2" x2="8" y2="6" />
+    <line x1="3" y1="10" x2="21" y2="10" />
+  </svg>
+);
+
+const IconLayers = ({ size = 18, color = "#0D3D3A" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="12 2 2 7 12 12 22 7 12 2" />
+    <polyline points="2 17 12 22 22 17" />
+    <polyline points="2 12 12 17 22 12" />
+  </svg>
+);
+
+const IconBarChart = ({ size = 18, color = "#0D3D3A" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="20" x2="12" y2="10" />
+    <line x1="18" y1="20" x2="18" y2="4" />
+    <line x1="6" y1="20" x2="6" y2="16" />
+  </svg>
+);
+
+const IconSearch = ({ size = 18, color = "#0D3D3A" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+);
+
 // ── Hardcoded example: Paroxetine + Warfarin interaction for 83yo F with COPD ──
 const MOCK_DATA = {
   query: {
@@ -71,18 +207,6 @@ const MOCK_DATA = {
     },
   ],
   alternatives: [
-    { drugName: "Sertraline", drugClass: "SSRI antidepressant",
-      whySafer: "Weaker CYP2C9 inhibition than paroxetine, resulting in less INR elevation when co-administered with warfarin.",
-      monitoring: "INR check at 1 and 4 weeks after initiation; monitor for bruising or bleeding signs",
-      relativeRisk: "lower",
-      source: "https://pubmed.ncbi.nlm.nih.gov/16364050/",
-      sourceLabel: "Sayal et al., J Clin Psychiatry 2006" },
-    { drugName: "Citalopram", drugClass: "SSRI antidepressant",
-      whySafer: "Minimal CYP2C9 and CYP2C19 inhibition; lower pharmacokinetic interaction potential with warfarin.",
-      monitoring: "Baseline and follow-up INR at 2 weeks; watch for serotonin-mediated platelet effects",
-      relativeRisk: "lower",
-      source: "https://pubmed.ncbi.nlm.nih.gov/11041620/",
-      sourceLabel: "Priskorn et al., Br J Clin Pharmacol 1997" },
     { drugName: "Mirtazapine", drugClass: "Tetracyclic antidepressant (NaSSA)",
       whySafer: "Non-SSRI mechanism avoids serotonin-mediated platelet inhibition; negligible CYP2C9 interaction with warfarin.",
       monitoring: "Sedation and weight gain; routine INR monitoring is generally sufficient",
@@ -90,10 +214,30 @@ const MOCK_DATA = {
       source: "https://pubmed.ncbi.nlm.nih.gov/10071079/",
       sourceLabel: "Anttila & Leinonen, Int Clin Psychopharmacol 1999" },
   ],
-  summary: "The combination of **Warfarin** and **Paroxetine** presents a **HIGH** risk for bleeding complications. Paroxetine is a potent inhibitor of CYP2C9, the primary enzyme responsible for warfarin metabolism, which can lead to significantly elevated INR and increased bleeding risk.\n\nFAERS data shows **1,689 adverse event reports** for this combination, with **40% resulting in hospitalization**, **3% in fatalities**, and **7% classified as life-threatening** \u2014 predominantly in elderly female patients over 70. The risk is particularly elevated in patients aged 81+ with comorbidities such as COPD.\n\n**Key concerns for this patient:**\n- Age 83 places her in the highest-risk demographic for warfarin-SSRI bleeding events\n- COPD may require concomitant medications that further elevate bleeding risk\n- Paroxetine\u2019s strong CYP2C9 inhibition can raise warfarin levels by 30\u201350%\n\n**Recommendation:** Strongly consider **mirtazapine** or **sertraline** as alternatives. If paroxetine is clinically necessary, reduce warfarin dose by 25\u201330%, check INR within 3\u20135 days, and monitor weekly for the first month.",
+  summary: "**Recommendation:** Consider **mirtazapine** as an alternative. If paroxetine is necessary, reduce warfarin dose by 25\u201330% and check INR within 3\u20135 days.",
   labelHits: [
     { rank: 1, score: 0.91, doc_id: "warfarin-003", text: "Drugs that inhibit CYP2C9 (e.g., paroxetine, fluconazole) may increase the anticoagulant effect of warfarin by increasing warfarin plasma concentrations. Close monitoring of INR is recommended when starting or stopping CYP2C9 inhibitors.", drugs: ["warfarin", "paroxetine"], section: "DRUG INTERACTIONS", generic_name: "warfarin sodium", source: "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=e0b7c3a1-dbb6-4a3e-862b-50df25843b24", sourceLabel: "DailyMed \u2014 Warfarin Sodium Label" },
     { rank: 2, score: 0.84, doc_id: "paroxetine-001", text: "Drugs that interfere with hemostasis (including warfarin): Serotonin release by platelets plays an important role in hemostasis. Co-administration of paroxetine with warfarin may result in increased bleeding.", drugs: ["paroxetine", "warfarin"], section: "WARNINGS AND PRECAUTIONS", generic_name: "paroxetine hydrochloride", source: "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=584c6299-faf8-42de-9e2c-25a56ab7cd80", sourceLabel: "DailyMed \u2014 Paroxetine HCl Label" },
+  ],
+  severityByPair: [
+    { pair: "Warfarin + Paroxetine", death: 51, lifeThreatening: 118, hospitalization: 674, other: 846 },
+    { pair: "Warfarin + Fluoxetine", death: 44, lifeThreatening: 102, hospitalization: 589, other: 731 },
+    { pair: "Warfarin + Sertraline", death: 29, lifeThreatening: 67, hospitalization: 412, other: 618 },
+    { pair: "Warfarin + Citalopram", death: 22, lifeThreatening: 53, hospitalization: 347, other: 542 },
+    { pair: "Warfarin + Venlafaxine", death: 18, lifeThreatening: 41, hospitalization: 278, other: 489 },
+    { pair: "Warfarin + Duloxetine", death: 15, lifeThreatening: 38, hospitalization: 241, other: 412 },
+    { pair: "Warfarin + Escitalopram", death: 12, lifeThreatening: 31, hospitalization: 198, other: 367 },
+    { pair: "Warfarin + Mirtazapine", death: 8, lifeThreatening: 19, hospitalization: 134, other: 298 },
+    { pair: "Warfarin + Bupropion", death: 7, lifeThreatening: 16, hospitalization: 112, other: 274 },
+    { pair: "Warfarin + Trazodone", death: 6, lifeThreatening: 14, hospitalization: 97, other: 241 },
+  ],
+  demographicRisk: [
+    { ageGroup: "18-30", male: 1.2, female: 1.4, maleCount: 6, femaleCount: 11 },
+    { ageGroup: "31-45", male: 1.5, female: 1.8, maleCount: 23, femaleCount: 38 },
+    { ageGroup: "46-60", male: 2.1, female: 2.4, maleCount: 72, femaleCount: 124 },
+    { ageGroup: "61-70", male: 2.8, female: 3.1, maleCount: 136, femaleCount: 231 },
+    { ageGroup: "71-80", male: 3.4, female: 3.9, maleCount: 229, femaleCount: 389 },
+    { ageGroup: "81+", male: 3.9, female: 4.5, maleCount: 159, femaleCount: 271 },
   ],
   faersSource: "faers_real",
   pipeline: {
@@ -244,10 +388,11 @@ function StatCard({ label, value, sub, color, icon, delay }) {
   return (
     <div style={{
       background: "white",
+      backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E\")",
       borderRadius: 16,
       boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
       border: "3px solid #0D3D3A",
-      padding: "20px",
+      padding: "24px",
       flex: 1,
       minWidth: 180,
       animation: `slideUp 0.5s ease ${delay}s both`,
@@ -281,9 +426,10 @@ function SectionCard({ title, subtitle, children, style = {} }) {
   return (
     <div style={{
       background: "white",
+      backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E\")",
       borderRadius: 16,
       boxShadow: "0 4px 24px rgba(0,0,0,0.07)",
-      padding: 24,
+      padding: 32,
       ...style,
     }}>
       {title && <div style={{
@@ -525,8 +671,18 @@ export default function RxGuardDashboard() {
     <div style={{
       minHeight: "100vh",
       background: "#E8EBE4",
+      backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='bg'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23bg)' opacity='0.035'/%3E%3C/svg%3E\")",
       fontFamily: "DM Sans, sans-serif",
+      position: "relative",
     }}>
+      {/* SVG noise filter (invisible, referenced by CSS) */}
+      <svg style={{ position: "absolute", width: 0, height: 0 }} aria-hidden="true">
+        <filter id="grain">
+          <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
+          <feColorMatrix type="saturate" values="0" />
+        </filter>
+      </svg>
+
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
         @keyframes slideUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
@@ -534,18 +690,29 @@ export default function RxGuardDashboard() {
         ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #f1f1f1; } ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
       `}</style>
 
+      {/* Page-level grain overlay */}
+      <div style={{
+        position: "fixed",
+        inset: 0,
+        pointerEvents: "none",
+        zIndex: 9999,
+        opacity: 0.04,
+        filter: "url(#grain)",
+        mixBlendMode: "multiply",
+      }} />
+
       {/* Main content */}
-      <div style={{ padding: "32px 48px 48px" }}>
+      <div style={{ padding: "48px 64px 80px", maxWidth: 1440, margin: "0 auto" }}>
 
         {/* Brand */}
-        <div style={{ marginBottom: 32 }}>
+        <div style={{ marginBottom: 48 }}>
           <Link to="/home" style={{ textDecoration: "none", cursor: "pointer", display: "inline-block", transition: "opacity 0.2s" }} onMouseOver={e => e.currentTarget.style.opacity = "0.8"} onMouseOut={e => e.currentTarget.style.opacity = "1"}>
             <span style={{ fontSize: 48, fontWeight: 700, color: "#0D3D3A", fontFamily: "Space Mono, monospace", letterSpacing: 4, textTransform: "uppercase" }}>RxGuard</span>
           </Link>
         </div>
 
         {/* Header */}
-        <div style={{ marginBottom: 32, animation: "slideUp 0.4s ease both" }}>
+        <div style={{ marginBottom: 40, animation: "slideUp 0.4s ease both" }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
@@ -576,13 +743,14 @@ export default function RxGuardDashboard() {
           <div style={{
             background: "white",
             borderRadius: 16,
-            padding: "20px 28px",
-            marginBottom: 28,
+            padding: "24px 32px",
+            marginBottom: 40,
             boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
             borderLeft: "4px solid #2A7D6F",
             animation: "slideUp 0.4s ease both",
           }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#2A7D6F", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 700, color: "#2A7D6F", textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>
+              <IconUser size={16} color="#2A7D6F" />
               Patient Summary
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "12px 32px", fontSize: 14, color: "#0D3D3A" }}>
@@ -633,19 +801,34 @@ export default function RxGuardDashboard() {
           </div>
         )}
 
-        {/* Clinical Analysis */}
+        {/* Stat Cards */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+          <IconActivity size={18} />
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#0D3D3A", fontFamily: "DM Sans, sans-serif", textTransform: "uppercase", letterSpacing: 1 }}>Adverse Event Statistics</span>
+          <LogicBadge
+            label={d.faersSource === "gemini_estimate" ? "Gemini Estimate" : "FDA FAERS"}
+            color={d.faersSource === "gemini_estimate" ? "#1565c0" : "#2e7d32"}
+            bg={d.faersSource === "gemini_estimate" ? "#e3f2fd" : "#e8f5e9"}
+          />
+        </div>
+        <div style={{ display: "flex", gap: 28, marginBottom: 44, flexWrap: "wrap" }}>
+          <StatCard label="Total Reports" value={d.totalReports} sub="FDA adverse event reports" color="#2A7D6F" icon="📊" delay={0.1} />
+          <StatCard label="Deaths" value={d.outcomes.deaths} sub={d.totalReports ? `${((d.outcomes.deaths/d.totalReports)*100).toFixed(1)}% of reports` : "No data"} color="#2A7D6F" icon="💀" delay={0.2} />
+          <StatCard label="Hospitalized" value={d.outcomes.hospitalized} sub={d.totalReports ? `${((d.outcomes.hospitalized/d.totalReports)*100).toFixed(1)}% of reports` : "No data"} color="#2A7D6F" icon="🏥" delay={0.3} />
+          <StatCard label="Life-Threatening" value={d.outcomes.lifeThreatening} sub={d.totalReports ? `${((d.outcomes.lifeThreatening/d.totalReports)*100).toFixed(1)}% of reports` : "No data"} color="#2A7D6F" icon="⚡" delay={0.4} />
+          <StatCard label="Other / Non-Serious" value={d.totalReports ? Math.max(0, d.totalReports - d.outcomes.deaths - d.outcomes.hospitalized - d.outcomes.lifeThreatening) : 0} sub={d.totalReports ? `${(Math.max(0, (1 - (d.outcomes.deaths + d.outcomes.hospitalized + d.outcomes.lifeThreatening) / d.totalReports)) * 100).toFixed(1)}% of reports` : "No data"} color="#2A7D6F" icon="📋" delay={0.5} />
+        </div>
+
+        {/* Clinical Analysis — minimalistic */}
         {d.summary && (
           <div style={{
-            background: "white",
-            borderRadius: 16,
-            padding: "20px 28px",
-            marginBottom: 28,
-            boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
-            borderLeft: "4px solid #2A7D6F",
+            marginBottom: 44,
+            padding: "28px 0",
             animation: "slideUp 0.45s ease both",
           }}>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#2A7D6F", textTransform: "uppercase", letterSpacing: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+              <IconStethoscope size={20} />
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#0D3D3A", textTransform: "uppercase", letterSpacing: 1 }}>
                 Clinical Analysis
               </div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
@@ -655,8 +838,8 @@ export default function RxGuardDashboard() {
               </div>
             </div>
 
-            {/* A. Risk Assessment */}
-            <div style={{ marginBottom: 20 }}>
+            {/* Risk Assessment */}
+            <div style={{ marginBottom: 24 }}>
               <ClinicalInsightItem
                 title={
                   (d.riskScore ?? 0) >= 8 ? "Avoid — High Risk Interaction"
@@ -674,7 +857,7 @@ export default function RxGuardDashboard() {
 
               {/* FDA Label Text Excerpts */}
               {d.labelHits && d.labelHits.length > 0 && (
-                <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 12 }}>
                   {d.labelHits.map((hit, i) => (
                     <div key={i} style={{
                       background: hit.section === "BOXED WARNING" ? "#fdecea" : "#fff8e1",
@@ -709,15 +892,16 @@ export default function RxGuardDashboard() {
               )}
             </div>
 
-            {/* B. Gemini Clinical Narrative */}
-            <div style={{ borderTop: "1px solid #e8ebe4", paddingTop: 16, marginBottom: 20 }}>
+            {/* Gemini Clinical Narrative */}
+            <div style={{ borderTop: "1px solid #d4d9d2", paddingTop: 24, marginBottom: 24 }}>
               <FormattedSummary text={d.summary} />
             </div>
 
-            {/* C. Safer Alternatives (integrated) */}
+            {/* Safer Alternatives */}
             {d.alternatives && d.alternatives.length > 0 && (
-              <div style={{ borderTop: "1px solid #e8ebe4", paddingTop: 16 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+              <div style={{ borderTop: "1px solid #d4d9d2", paddingTop: 24 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
+                  <IconShieldCheck size={20} />
                   <div style={{ fontSize: 13, fontWeight: 700, color: "#0D3D3A", textTransform: "uppercase", letterSpacing: 1 }}>
                     Safer Alternatives to {d.query?.newPrescription || "Prescribed Drug"}
                   </div>
@@ -733,8 +917,8 @@ export default function RxGuardDashboard() {
                     const risk = riskColorMap[alt.relativeRisk] || riskColorMap["lower"];
                     return (
                       <div key={i} style={{
-                        padding: "12px 0",
-                        borderTop: i > 0 ? "1px solid #f0f0f0" : "none",
+                        padding: "16px 0",
+                        borderTop: i > 0 ? "1px solid #e8ebe4" : "none",
                       }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                           <span style={{ fontSize: 14, fontWeight: 700, color: "#0D3D3A", fontFamily: "DM Sans, sans-serif" }}>
@@ -773,26 +957,9 @@ export default function RxGuardDashboard() {
           </div>
         )}
 
-        {/* Stat Cards */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "#0D3D3A", fontFamily: "DM Sans, sans-serif", textTransform: "uppercase", letterSpacing: 1 }}>Adverse Event Statistics</span>
-          <LogicBadge
-            label={d.faersSource === "gemini_estimate" ? "Gemini Estimate" : "FDA FAERS"}
-            color={d.faersSource === "gemini_estimate" ? "#1565c0" : "#2e7d32"}
-            bg={d.faersSource === "gemini_estimate" ? "#e3f2fd" : "#e8f5e9"}
-          />
-        </div>
-        <div style={{ display: "flex", gap: 24, marginBottom: 28, flexWrap: "wrap" }}>
-          <StatCard label="Total Reports" value={d.totalReports} sub="FDA adverse event reports" color="#2A7D6F" icon="📊" delay={0.1} />
-          <StatCard label="Deaths" value={d.outcomes.deaths} sub={d.totalReports ? `${((d.outcomes.deaths/d.totalReports)*100).toFixed(1)}% of reports` : "No data"} color="#2A7D6F" icon="💀" delay={0.2} />
-          <StatCard label="Hospitalized" value={d.outcomes.hospitalized} sub={d.totalReports ? `${((d.outcomes.hospitalized/d.totalReports)*100).toFixed(1)}% of reports` : "No data"} color="#2A7D6F" icon="🏥" delay={0.3} />
-          <StatCard label="Life-Threatening" value={d.outcomes.lifeThreatening} sub={d.totalReports ? `${((d.outcomes.lifeThreatening/d.totalReports)*100).toFixed(1)}% of reports` : "No data"} color="#2A7D6F" icon="⚡" delay={0.4} />
-          <StatCard label="Other / Non-Serious" value={d.totalReports ? Math.max(0, d.totalReports - d.outcomes.deaths - d.outcomes.hospitalized - d.outcomes.lifeThreatening) : 0} sub={d.totalReports ? `${(Math.max(0, (1 - (d.outcomes.deaths + d.outcomes.hospitalized + d.outcomes.lifeThreatening) / d.totalReports)) * 100).toFixed(1)}% of reports` : "No data"} color="#2A7D6F" icon="📋" delay={0.5} />
-        </div>
-
         {/* Charts Row — only show when we have report data */}
         {d.totalReports > 0 && d.topReactions && d.topReactions.length > 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24, marginBottom: 28 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 32, marginBottom: 44 }}>
 
             {/* Top Reactions */}
             <SectionCard title="Top Reported Reactions" subtitle={`Across ${d.totalReports.toLocaleString()} matched reports`}>
@@ -833,7 +1000,7 @@ export default function RxGuardDashboard() {
 
         {/* Age Distribution — only show when we have data */}
         {d.totalReports > 0 && d.ageDistribution && d.ageDistribution.some(a => a.count > 0) && (
-          <div style={{ marginBottom: 28 }}>
+          <div style={{ marginBottom: 44 }}>
             <SectionCard title="Age Distribution of Matched Reports" subtitle="Hover to see exact counts">
               <ResponsiveContainer width="100%" height={220}>
                 <AreaChart data={d.ageDistribution} margin={{ left: 10, right: 20, top: 10, bottom: 10 }}>
@@ -854,13 +1021,14 @@ export default function RxGuardDashboard() {
         )}
 
         {/* Similar Cases Table */}
+        <div style={{ marginBottom: 44 }}>
         <SectionCard title={<div style={{ display: "flex", alignItems: "center", gap: 10 }}><span>Most Similar Patient Cases</span><LogicBadge label="V3 Vector + Ranker" /></div>} subtitle="Ranked by semantic similarity to your patient profile">
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ borderBottom: "2px solid #f0f0f0" }}>
                   {["Match", "Age / Sex", "Drugs on File", "Reactions", "Outcome", "Similarity"].map(h => (
-                    <th key={h} style={{ padding: "8px 12px", textAlign: "left", fontSize: 11, color: "#aaa", fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>{h}</th>
+                    <th key={h} style={{ padding: "12px 14px", textAlign: "left", fontSize: 11, color: "#aaa", fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -876,12 +1044,12 @@ export default function RxGuardDashboard() {
                         transition: "background 0.2s",
                       }}
                     >
-                      <td style={{ padding: "14px 12px", fontSize: 13, fontWeight: 700, color: "#2A7D6F", fontFamily: "Space Mono, monospace" }}>#{i + 1}</td>
-                      <td style={{ padding: "14px 12px", fontSize: 13, color: "#333" }}>{c.age}y · {c.sex}</td>
-                      <td style={{ padding: "14px 12px", fontSize: 12, color: "#555", maxWidth: 200 }}>{c.drugs}</td>
-                      <td style={{ padding: "14px 12px", fontSize: 12, color: "#555", maxWidth: 360 }}>{c.reactions}</td>
-                      <td style={{ padding: "14px 12px" }}><OutcomeBadge type={c.outcomeType} /></td>
-                      <td style={{ padding: "14px 12px", minWidth: 140 }}><SimilarityBar value={c.similarity} /></td>
+                      <td style={{ padding: "16px 14px", fontSize: 13, fontWeight: 700, color: "#2A7D6F", fontFamily: "Space Mono, monospace" }}>#{i + 1}</td>
+                      <td style={{ padding: "16px 14px", fontSize: 13, color: "#333" }}>{c.age}y · {c.sex}</td>
+                      <td style={{ padding: "16px 14px", fontSize: 12, color: "#555", maxWidth: 200 }}>{c.drugs}</td>
+                      <td style={{ padding: "16px 14px", fontSize: 12, color: "#555", maxWidth: 360 }}>{c.reactions}</td>
+                      <td style={{ padding: "16px 14px" }}><OutcomeBadge type={c.outcomeType} /></td>
+                      <td style={{ padding: "16px 14px", minWidth: 140 }}><SimilarityBar value={c.similarity} /></td>
                     </tr>
                     {expandedCase === c.id && (
                       <tr key={`exp-${c.id}`} style={{ background: "#eaf3f1" }}>
@@ -901,15 +1069,16 @@ export default function RxGuardDashboard() {
             </table>
           </div>
         </SectionCard>
+        </div>
 
         {/* ── Sphinx EDA Section ─────────────────────────────────────────── */}
         {d.severityByPair && d.severityByPair.length > 0 && (
           <>
             <div style={{
               borderTop: "2px solid #c4d9d6",
-              marginTop: 40,
-              marginBottom: 28,
-              paddingTop: 28,
+              marginTop: 52,
+              marginBottom: 36,
+              paddingTop: 36,
               display: "flex",
               alignItems: "flex-start",
               justifyContent: "space-between",
@@ -918,6 +1087,7 @@ export default function RxGuardDashboard() {
             }}>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <IconBarChart size={22} />
                   <div style={{ fontSize: 28, fontWeight: 700, color: "#0D3D3A", lineHeight: 1.2 }}>
                     Sphinx EDA
                   </div>
@@ -950,7 +1120,7 @@ export default function RxGuardDashboard() {
 
             {/* Severity Distribution by Drug Pair */}
             {d.severityByPair && d.severityByPair.length > 0 && (
-              <div style={{ marginBottom: 28 }}>
+              <div style={{ marginBottom: 44 }}>
                 <SectionCard title="Severity Distribution by Drug Pair" subtitle="Top 15 interaction pairs for this search">
                   <ResponsiveContainer width="100%" height={Math.max(400, d.severityByPair.length * 36)}>
                     <BarChart
@@ -977,7 +1147,7 @@ export default function RxGuardDashboard() {
 
             {/* Demographic Risk Profile */}
             {d.demographicRisk && d.demographicRisk.length > 0 && (
-              <div style={{ marginBottom: 28 }}>
+              <div style={{ marginBottom: 44 }}>
                 <SectionCard title="Demographic Risk Profile" subtitle="Mean severity by age group and sex for this drug pair">
                   <ResponsiveContainer width="100%" height={260}>
                     <BarChart data={d.demographicRisk} margin={{ left: 0, right: 20, top: 8, bottom: 8 }}>
