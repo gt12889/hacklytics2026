@@ -331,6 +331,10 @@ def _aggregate_from_sample(
         and drug_b in [normalize_drug(d) for d in case.drugs]
     ]
 
+    print(f"[CHART:StatCards] source=sample, query_drugs={drugs}, normalized=({drug_a}, {drug_b}), matched_cases={len(matched)}")
+    for c, _ in matched:
+        print(f"  case={c.case_id} drugs={c.drugs} severity={c.outcome_severity} faers_matches={c.faers_matches} age={c.age} sex={c.sex}")
+
     # Total reports: sum faers_matches across matched cases
     total = sum(case.faers_matches for case, _ in matched)
 
@@ -374,7 +378,7 @@ def _aggregate_from_sample(
         count = sum(1 for a in ages if lo <= a <= hi)
         age_dist.append({"range": label, "count": count})
 
-    return {
+    result = {
         "totalReports": total,
         "outcomes": {
             "deaths": deaths,
@@ -388,6 +392,11 @@ def _aggregate_from_sample(
         ],
         "ageDistribution": age_dist,
     }
+    print(f"[CHART:StatCards] totalReports={total}, deaths={deaths}, hospitalized={hospitalized}, lifeThreatening={serious}")
+    print(f"[CHART:TopReactions] {top_reactions}")
+    print(f"[CHART:SexSplit] female={female_pct}%, male={100 - female_pct}%")
+    print(f"[CHART:AgeDistribution] {age_dist}")
+    return result
 
 
 SEVERITY_LABELS = {4: "death", 3: "life-threatening", 2: "hospitalization", 0: "other"}
@@ -426,6 +435,7 @@ def _sphinx_context(
     Returns a dict with optional keys: severityBreakdown, datasetStats,
     demographicRisk.  Each is omitted when data is unavailable.
     """
+    print(f"\n[SPHINX] Computing EDA context: drugs={drugs}, parquet={'yes' if df is not None else 'no'}, ranked_results={len(ranked_results)}")
     result = {}
 
     # ── Severity Breakdown ────────────────────────────────────────────────
@@ -438,6 +448,7 @@ def _sphinx_context(
                 {"severity": label, "count": int(sev_counts.get(label, 0))}
                 for label in SEVERITY_ORDER
             ]
+            print(f"[CHART:SeverityBreakdown] source=parquet, matched={len(matched)} rows, data={result['severityBreakdown']}")
 
     # Fallback: derive from full corpus filtered to drug pair
     if "severityBreakdown" not in result and ranked_results:
@@ -469,6 +480,10 @@ def _sphinx_context(
                 {"severity": label, "count": sev_counts.get(label, 0)}
                 for label in SEVERITY_ORDER
             ]
+            print(f"[CHART:SeverityBreakdown] source=cases_fallback, matched={len(sev_source)} cases, data={result['severityBreakdown']}")
+
+    if "severityBreakdown" not in result:
+        print(f"[CHART:SeverityBreakdown] SKIPPED — no matching data")
 
     # ── Dataset Stats (parquet only) ──────────────────────────────────────
     if df is not None:
@@ -510,6 +525,7 @@ def _sphinx_context(
                         entry[f"{sex}Count"] = 0
                 demo_risk.append(entry)
             result["demographicRisk"] = demo_risk
+            print(f"[CHART:DemographicRisk] source=parquet, data={demo_risk}")
 
     # ── Demographic Risk Fallback (from cases when parquet unavailable) ──
     if "demographicRisk" not in result and len(drugs) >= 2:
@@ -537,6 +553,10 @@ def _sphinx_context(
                         entry[f"{sex}Count"] = 0
                 demo_risk.append(entry)
             result["demographicRisk"] = demo_risk
+            print(f"[CHART:DemographicRisk] source=cases_fallback, valid_cases={len(valid)}, data={demo_risk}")
+
+    if "demographicRisk" not in result:
+        print(f"[CHART:DemographicRisk] SKIPPED — no matching data with age+sex")
 
     # ── Severity by Pair (scoped to drug pair) ───────────────────────────
     if df is not None and len(drugs) >= 2:
@@ -573,6 +593,7 @@ def _sphinx_context(
                         })
                     records.sort(key=lambda r: r["total"], reverse=True)
                     result["severityByPair"] = records[:15]
+                    print(f"[CHART:SeverityByPair] source=parquet, pairs={len(records)}, top3={records[:3]}")
         except Exception as e:
             print(f"[RxGuard] Per-query severityByPair error: {e}")
 
@@ -610,9 +631,14 @@ def _sphinx_context(
                     })
                 records.sort(key=lambda r: r["total"], reverse=True)
                 result["severityByPair"] = records[:15]
+                print(f"[CHART:SeverityByPair] source=cases_fallback, sbp_cases={len(sbp_cases)}, pairs={len(records)}, top3={records[:3]}")
         except Exception as e:
             print(f"[RxGuard] severityByPair fallback error: {e}")
 
+    if "severityByPair" not in result:
+        print(f"[CHART:SeverityByPair] SKIPPED — no matching data")
+
+    print(f"[SPHINX] Final keys returned: {list(result.keys())}")
     return result
 
 
@@ -634,6 +660,7 @@ def _build_similar_cases(ranked_results: list, limit: int = 5) -> list[dict]:
             ),
         })
     similar.sort(key=lambda c: c["similarity"], reverse=True)
+    print(f"[CHART:SimilarCases] count={len(similar)}, similarities={[c['similarity'] for c in similar]}")
     return similar
 
 
@@ -684,6 +711,10 @@ def search(req: SearchRequest):
         context = processed["context"]
         embedding = processed["embedding"]
 
+        print(f"\n{'='*60}")
+        print(f"[SEARCH] query=\"{req.query[:80]}...\" engine={req.engine} drugs={drugs}")
+        print(f"{'='*60}")
+
         # 2. Run selected search engine with timing
         engine = req.engine.lower()
         with logger.time_stage("search"):
@@ -717,7 +748,10 @@ def search(req: SearchRequest):
 
         # 5. FAERS aggregation
         faers_stats = _aggregate_from_parquet(faers_df, drugs)
-        if faers_stats is None:
+        if faers_stats is not None:
+            print(f"[FAERS] source=parquet")
+        else:
+            print(f"[FAERS] source=sample (no parquet)")
             faers_stats = _aggregate_from_sample(ranked, drugs)
 
         # 6. Build similar cases
