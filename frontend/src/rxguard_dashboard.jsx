@@ -263,20 +263,6 @@ export default function RxGuardDashboard() {
                 <div style={{ fontSize: 36, fontWeight: 700, color: "#0D3D3A", lineHeight: 1.1 }}>
                   Drug Interaction Risk Summary
                 </div>
-                {d.riskScore != null && (
-                  <span style={{
-                    background: d.riskScore >= 8 ? "#d32f2f" : d.riskScore >= 5 ? "#f57f17" : "#2A7D6F",
-                    color: "white",
-                    borderRadius: 8,
-                    padding: "6px 14px",
-                    fontSize: 14,
-                    fontWeight: 700,
-                    fontFamily: "Space Mono, monospace",
-                    whiteSpace: "nowrap",
-                  }}>
-                    {d.riskScore.toFixed(1)} / 10 — {d.riskLevel}
-                  </span>
-                )}
               </div>
               <div style={{ fontSize: 14, color: "#888", marginTop: 4 }}>
                 {d.query.currentMed} + {d.query.newPrescription} · {d.query.conditions}
