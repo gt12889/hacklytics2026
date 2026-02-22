@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area } from "recharts";
 
@@ -6,117 +6,242 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 const MOCK_DATA = {
   query: {
     currentMed: "Warfarin",
-    newPrescription: "Ibuprofen",
-    age: 72,
+    newPrescription: "Paroxetine",
+    age: 83,
     sex: "Female",
-    conditions: "Atrial fibrillation, Chronic kidney disease",
+    conditions: "COPD",
   },
-  totalReports: 1532,
+  riskScore: 9,
+  totalReports: 243,
   outcomes: {
-    deaths: 47,
-    hospitalized: 312,
-    lifeThreatening: 89,
+    deaths: 18,
+    hospitalized: 97,
+    lifeThreatening: 34,
   },
   topReactions: [
-    { name: "Renal failure", count: 210 },
-    { name: "GI haemorrhage", count: 163 },
-    { name: "INR increased", count: 152 },
-    { name: "Acute kidney injury", count: 142 },
-    { name: "Anaemia", count: 98 },
-    { name: "Hyperkalaemia", count: 67 },
+    { name: "INR increased", count: 68 },
+    { name: "Haemorrhage", count: 52 },
+    { name: "Epistaxis", count: 41 },
+    { name: "GI haemorrhage", count: 37 },
+    { name: "Ecchymosis", count: 29 },
+    { name: "Cerebral haemorrhage", count: 16 },
   ],
   sexSplit: [
-    { name: "Female", value: 57 },
-    { name: "Male", value: 43 },
+    { name: "Female", value: 63 },
+    { name: "Male", value: 37 },
   ],
   ageDistribution: [
-    { range: "18-30", count: 12 },
-    { range: "31-45", count: 34 },
-    { range: "46-60", count: 89 },
-    { range: "61-70", count: 198 },
-    { range: "71-80", count: 312 },
-    { range: "81+", count: 187 },
+    { range: "18-30", count: 3 },
+    { range: "31-45", count: 9 },
+    { range: "46-60", count: 28 },
+    { range: "61-70", count: 54 },
+    { range: "71-80", count: 87 },
+    { range: "81+", count: 62 },
   ],
   similarCases: [
     {
       id: 1,
-      age: 74,
+      age: 81,
       sex: "Female",
-      drugs: "Warfarin, Ibuprofen",
-      reactions: "Renal failure, INR increased",
+      drugs: "Warfarin, Paroxetine, Lisinopril",
+      reactions: "INR increased, GI haemorrhage, Anaemia",
       outcome: "Hospitalized",
-      similarity: 89,
+      similarity: 92,
       outcomeType: "hospitalized",
     },
     {
       id: 2,
-      age: 69,
+      age: 85,
       sex: "Female",
-      drugs: "Warfarin, Lisinopril, Ibuprofen",
-      reactions: "Acute kidney injury, Anaemia",
+      drugs: "Warfarin, Paroxetine",
+      reactions: "Cerebral haemorrhage, INR increased",
       outcome: "Fatal",
-      similarity: 84,
+      similarity: 88,
       outcomeType: "death",
     },
     {
       id: 3,
-      age: 78,
+      age: 79,
       sex: "Female",
-      drugs: "Warfarin, Ibuprofen",
-      reactions: "GI haemorrhage, Renal failure",
+      drugs: "Warfarin, Paroxetine, Omeprazole",
+      reactions: "Haemorrhage, Ecchymosis, Epistaxis",
+      outcome: "Hospitalized",
+      similarity: 85,
+      outcomeType: "hospitalized",
+    },
+    {
+      id: 4,
+      age: 82,
+      sex: "Female",
+      drugs: "Warfarin, Paroxetine, Amlodipine",
+      reactions: "INR increased, Haemorrhage, Dizziness",
       outcome: "Life-threatening",
       similarity: 81,
       outcomeType: "lifethreat",
     },
     {
-      id: 4,
-      age: 71,
-      sex: "Female",
-      drugs: "Warfarin, Ibuprofen, Atorvastatin",
-      reactions: "INR increased, GI haemorrhage",
-      outcome: "Hospitalized",
-      similarity: 76,
-      outcomeType: "hospitalized",
-    },
-    {
       id: 5,
-      age: 75,
+      age: 77,
       sex: "Female",
-      drugs: "Warfarin, Ibuprofen",
-      reactions: "Renal failure, Hyperkalaemia",
+      drugs: "Warfarin, Paroxetine",
+      reactions: "Epistaxis, Ecchymosis, INR increased",
       outcome: "Hospitalized",
-      similarity: 72,
+      similarity: 78,
       outcomeType: "hospitalized",
     },
   ],
   alternatives: [
-    { drugName: "Acetaminophen", drugClass: "Non-opioid analgesic",
-      whySafer: "Does not affect INR or increase bleeding risk with warfarin.",
-      monitoring: "Hepatic function; limit to <2g/day in elderly",
+    { drugName: "Sertraline", drugClass: "SSRI antidepressant",
+      whySafer: "Weaker CYP2C9 inhibition than paroxetine, resulting in less INR elevation when co-administered with warfarin.",
+      monitoring: "INR check at 1 and 4 weeks after initiation; monitor for bruising or bleeding signs",
+      relativeRisk: "lower",
+      source: "https://pubmed.ncbi.nlm.nih.gov/16364050/",
+      sourceLabel: "Sayal et al., J Clin Psychiatry 2006" },
+    { drugName: "Citalopram", drugClass: "SSRI antidepressant",
+      whySafer: "Minimal CYP2C9 and CYP2C19 inhibition; lower pharmacokinetic interaction potential with warfarin.",
+      monitoring: "Baseline and follow-up INR at 2 weeks; watch for serotonin-mediated platelet effects",
+      relativeRisk: "lower",
+      source: "https://pubmed.ncbi.nlm.nih.gov/11041620/",
+      sourceLabel: "Priskorn et al., Br J Clin Pharmacol 1997" },
+    { drugName: "Mirtazapine", drugClass: "Tetracyclic antidepressant (NaSSA)",
+      whySafer: "Non-SSRI mechanism avoids serotonin-mediated platelet inhibition; negligible CYP2C9 interaction with warfarin.",
+      monitoring: "Sedation and weight gain; routine INR monitoring is generally sufficient",
       relativeRisk: "much-lower",
-      source: "https://pubmed.ncbi.nlm.nih.gov/17327457/",
-      sourceLabel: "Battistella et al., Arch Intern Med 2005" },
-    { drugName: "Topical Diclofenac", drugClass: "Topical NSAID",
-      whySafer: "Minimal systemic absorption reduces INR elevation and GI bleeding risk.",
-      monitoring: "Application site reactions; periodic INR if long-term",
-      relativeRisk: "lower",
-      source: "https://pubmed.ncbi.nlm.nih.gov/15266516/",
-      sourceLabel: "Kienzler et al., Drugs R D 2010" },
-    { drugName: "Celecoxib (low-dose)", drugClass: "COX-2 selective NSAID",
-      whySafer: "COX-2 selectivity spares platelet function, less bleeding risk.",
-      monitoring: "INR weekly for first month; consider PPI co-therapy",
-      relativeRisk: "lower",
-      source: "https://pubmed.ncbi.nlm.nih.gov/17181642/",
-      sourceLabel: "Depta & Bhatt, Cleve Clin J Med 2006" },
+      source: "https://pubmed.ncbi.nlm.nih.gov/10071079/",
+      sourceLabel: "Anttila & Leinonen, Int Clin Psychopharmacol 1999" },
   ],
-  summary: "The combination of Warfarin and Ibuprofen presents a HIGH risk for gastrointestinal bleeding and INR elevation. FAERS data shows 1,532 adverse event reports for this combination, with 12% resulting in hospitalization and 3% in fatalities \u2014 predominantly in female patients over 60. This is corroborated by the FDA-approved drug label, which carries a Boxed Warning about increased GI bleeding risk when warfarin is co-administered with NSAIDs. Consider acetaminophen as an alternative analgesic; if an NSAID is required, use the lowest effective dose with PPI gastroprotection and increased INR monitoring.",
+  summary: "The combination of **Warfarin** and **Paroxetine** presents a **HIGH** risk for bleeding complications. Paroxetine is a potent inhibitor of CYP2C9, the primary enzyme responsible for warfarin metabolism, which can lead to significantly elevated INR and increased bleeding risk.\n\nFAERS data shows **243 adverse event reports** for this combination, with **40% resulting in hospitalization** and **7.4% in fatalities** \u2014 predominantly in elderly female patients over 70. The risk is particularly elevated in patients aged 81+ with comorbidities such as COPD.\n\n**Key concerns for this patient:**\n- Age 83 places her in the highest-risk demographic for warfarin-SSRI bleeding events\n- COPD may require concomitant medications that further elevate bleeding risk\n- Paroxetine\u2019s strong CYP2C9 inhibition can raise warfarin levels by 30\u201350%\n\n**Recommendation:** Strongly consider **mirtazapine** or **sertraline** as alternatives. If paroxetine is clinically necessary, reduce warfarin dose by 25\u201330%, check INR within 3\u20135 days, and monitor weekly for the first month.",
   labelHits: [
-    { rank: 1, score: 0.87, doc_id: "warfarin-001", text: "Co-administration of warfarin with NSAIDs increases the risk of GI bleeding...", drugs: ["warfarin", "ibuprofen"], section: "BOXED WARNING", generic_name: "warfarin sodium", source: "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=e0b7c3a1-dbb6-4a3e-862b-50df25843b24", sourceLabel: "DailyMed — Warfarin Sodium Label" },
-    { rank: 2, score: 0.82, doc_id: "ibuprofen-002", text: "NSAIDs can reduce the natriuretic effect of diuretics and antihypertensives...", drugs: ["ibuprofen"], section: "DRUG INTERACTIONS", generic_name: "ibuprofen", source: "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=a74a4856-4474-5a43-b1b0-15e0e4e4c3b7", sourceLabel: "DailyMed — Ibuprofen Label" },
+    { rank: 1, score: 0.91, doc_id: "warfarin-003", text: "Drugs that inhibit CYP2C9 (e.g., paroxetine, fluconazole) may increase the anticoagulant effect of warfarin by increasing warfarin plasma concentrations. Close monitoring of INR is recommended when starting or stopping CYP2C9 inhibitors.", drugs: ["warfarin", "paroxetine"], section: "DRUG INTERACTIONS", generic_name: "warfarin sodium", source: "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=e0b7c3a1-dbb6-4a3e-862b-50df25843b24", sourceLabel: "DailyMed \u2014 Warfarin Sodium Label" },
+    { rank: 2, score: 0.84, doc_id: "paroxetine-001", text: "Drugs that interfere with hemostasis (including warfarin): Serotonin release by platelets plays an important role in hemostasis. Co-administration of paroxetine with warfarin may result in increased bleeding.", drugs: ["paroxetine", "warfarin"], section: "WARNINGS AND PRECAUTIONS", generic_name: "paroxetine hydrochloride", source: "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=584c6299-faf8-42de-9e2c-25a56ab7cd80", sourceLabel: "DailyMed \u2014 Paroxetine HCl Label" },
   ],
+  faersSource: "faers_real",
+  pipeline: {
+    stages: [
+      { name: "NLP Processing", key: "query_processing", duration_ms: 118.7, detail: "Extracted 2 drugs, parsed age/sex/conditions", tech: "spaCy + regex" },
+      { name: "Vector Search", key: "search", duration_ms: 201.4, detail: "V3 engine, 38 raw results from 243 cases", tech: "all-MiniLM-L6-v2" },
+      { name: "Results Ranking", key: "ranking", duration_ms: 39.8, detail: "Ranked 38 cases by similarity \u00d7 severity \u00d7 demographics", tech: "Multi-signal ranker" },
+      { name: "DailyMed Labels", key: "label_search", duration_ms: 387.2, detail: "Found 2 FDA label matches (DRUG INTERACTIONS, WARNINGS)", tech: "Semantic label search" },
+      { name: "Gemini Analysis", key: "response_generation", duration_ms: 3124.6, detail: "Generated clinical summary + 3 safer alternatives", tech: "Gemini 2.5 Flash" },
+    ],
+    total_ms: 3871.7,
+    engine_used: "V3",
+    drugs_extracted: ["warfarin", "paroxetine"],
+    embedding_dim: 384,
+    cases_searched: 243,
+    cases_ranked: 38,
+  },
 };
 
 const SEX_COLORS = ["#2A7D6F", "#0D3D3A"];
+
+// ── Logic Badge ───────────────────────────────────────────────────────────────
+
+function LogicBadge({ label, color = "#2A7D6F", bg = "#e0f2ef" }) {
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 4,
+      background: bg, color, borderRadius: 20,
+      padding: "2px 10px", fontSize: 10, fontWeight: 700,
+      fontFamily: "Space Mono, monospace",
+      letterSpacing: 0.5, textTransform: "uppercase", whiteSpace: "nowrap",
+    }}>
+      <span style={{ width: 5, height: 5, borderRadius: "50%", background: color, display: "inline-block" }} />
+      {label}
+    </span>
+  );
+}
+
+// ── Pipeline Summary Card ─────────────────────────────────────────────────────
+
+const STAGE_ICONS = {
+  query_processing: "Rx",
+  search: "S",
+  ranking: "R",
+  label_search: "L",
+  response_generation: "AI",
+};
+
+function PipelineSummaryCard({ pipeline }) {
+  if (!pipeline || !pipeline.stages) return null;
+  const [expanded, setExpanded] = useState(false);
+
+  const dColor = (ms) => ms == null ? "#aaa" : ms < 500 ? "#2e7d32" : ms <= 2000 ? "#f57f17" : "#e65100";
+  const dBg = (ms) => ms == null ? "#f5f5f5" : ms < 500 ? "#e8f5e9" : ms <= 2000 ? "#fff8e1" : "#fff3e0";
+
+  return (
+    <div style={{
+      background: "white", borderRadius: 16,
+      boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
+      padding: "20px 28px", marginBottom: 28,
+      animation: "slideUp 0.4s ease 0.1s both",
+    }}>
+      <div
+        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, cursor: "pointer" }}
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#2A7D6F", textTransform: "uppercase", letterSpacing: 1, fontFamily: "DM Sans, sans-serif" }}>
+            Processing Pipeline
+          </div>
+          <span style={{ fontFamily: "Space Mono, monospace", fontSize: 11, color: "#888" }}>
+            {pipeline.total_ms ? `${(pipeline.total_ms / 1000).toFixed(1)}s total` : ""}
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <LogicBadge label={`${pipeline.engine_used} Engine`} />
+          <span style={{ fontSize: 11, color: "#aaa", transition: "transform 0.3s", transform: expanded ? "rotate(180deg)" : "rotate(0)" }}>&#9660;</span>
+        </div>
+      </div>
+
+      {/* Horizontal stage flow */}
+      <div style={{ display: "flex", alignItems: "center", gap: 0, overflowX: "auto", paddingBottom: 4 }}>
+        {pipeline.stages.map((stage, i) => (
+          <Fragment key={stage.key}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: 90, flex: "1 1 0" }}>
+              <div style={{
+                width: 40, height: 40, borderRadius: 12,
+                background: dBg(stage.duration_ms),
+                border: `2px solid ${dColor(stage.duration_ms)}`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontFamily: "Space Mono, monospace",
+                fontSize: 12, fontWeight: 700,
+                color: dColor(stage.duration_ms),
+                marginBottom: 6,
+              }}>
+                {STAGE_ICONS[stage.key] || "?"}
+              </div>
+              <div style={{ fontSize: 10, fontWeight: 600, color: "#0D3D3A", textAlign: "center", lineHeight: 1.3, fontFamily: "DM Sans, sans-serif" }}>
+                {stage.name}
+              </div>
+              <div style={{ fontFamily: "Space Mono, monospace", fontSize: 11, fontWeight: 700, color: dColor(stage.duration_ms), marginTop: 2 }}>
+                {stage.duration_ms != null ? `${Math.round(stage.duration_ms)}ms` : "--"}
+              </div>
+            </div>
+            {i < pipeline.stages.length - 1 && (
+              <div style={{ color: "#c4d9d6", fontSize: 18, padding: "0 2px", fontWeight: 400, userSelect: "none", marginBottom: 20 }}>&rarr;</div>
+            )}
+          </Fragment>
+        ))}
+      </div>
+
+      {/* Collapsible detail */}
+      <div style={{ maxHeight: expanded ? 300 : 0, overflow: "hidden", transition: "max-height 0.4s ease" }}>
+        <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #e8ebe4", display: "flex", flexDirection: "column", gap: 6 }}>
+          {pipeline.stages.map(stage => (
+            <div key={stage.key} style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 12, fontFamily: "DM Sans, sans-serif" }}>
+              <span style={{ fontWeight: 700, color: "#0D3D3A", minWidth: 130 }}>{stage.name}</span>
+              <span style={{ color: "#555" }}>{stage.detail}</span>
+            </div>
+          ))}
+          <div style={{ fontSize: 11, color: "#aaa", marginTop: 6, fontFamily: "Space Mono, monospace" }}>
+            Drugs: {pipeline.drugs_extracted?.join(", ")} | Cases searched: {pipeline.cases_searched} | Embedding: {pipeline.embedding_dim}-dim | Ranked: {pipeline.cases_ranked}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
@@ -405,7 +530,13 @@ export default function RxGuardDashboard() {
   const [expandedCase, setExpandedCase] = useState(null);
   const [hoveredBar, setHoveredBar] = useState(null);
   const d = location.state?.data || MOCK_DATA;
-  const parsed = location.state?.parsed || null;
+  const parsed = location.state?.parsed || {
+    age: 83,
+    sex: 2,
+    preexisting_conditions: ["COPD"],
+    current_medications: ["Warfarin"],
+    prescribed_medications: ["Paroxetine"],
+  };
 
   const onNewSearch = () => navigate("/home");
 
@@ -493,6 +624,9 @@ export default function RxGuardDashboard() {
           </div>
         )}
 
+        {/* Pipeline Summary */}
+        <PipelineSummaryCard pipeline={d.pipeline} />
+
         {/* Gemini Error Banner */}
         {d.geminiError && (
           <div style={{
@@ -533,12 +667,10 @@ export default function RxGuardDashboard() {
               <div style={{ fontSize: 13, fontWeight: 700, color: "#2A7D6F", textTransform: "uppercase", letterSpacing: 1 }}>
                 Clinical Analysis
               </div>
-              <div style={{ fontSize: 11, color: "#aaa", fontFamily: "DM Sans, sans-serif", display: "flex", gap: 6, flexWrap: "wrap" }}>
-                Powered by{" "}
-                <a href="https://open.fda.gov/apis/drug/event/" target="_blank" rel="noopener noreferrer" style={{ color: "#2A7D6F", textDecoration: "none" }} onMouseOver={e => e.currentTarget.style.textDecoration = "underline"} onMouseOut={e => e.currentTarget.style.textDecoration = "none"}>FAERS</a>
-                {" + "}
-                <a href="https://dailymed.nlm.nih.gov/dailymed/" target="_blank" rel="noopener noreferrer" style={{ color: "#2A7D6F", textDecoration: "none" }} onMouseOver={e => e.currentTarget.style.textDecoration = "underline"} onMouseOut={e => e.currentTarget.style.textDecoration = "none"}>DailyMed</a>
-                {" + Gemini"}
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                <LogicBadge label="Gemini 2.5 Flash" color="#1565c0" bg="#e3f2fd" />
+                <LogicBadge label="DailyMed Labels" color="#e65100" bg="#fff3e0" />
+                <LogicBadge label="FDA FAERS" color="#2e7d32" bg="#e8f5e9" />
               </div>
             </div>
 
@@ -604,8 +736,11 @@ export default function RxGuardDashboard() {
             {/* C. Safer Alternatives (integrated) */}
             {d.alternatives && d.alternatives.length > 0 && (
               <div style={{ borderTop: "1px solid #e8ebe4", paddingTop: 16 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#0D3D3A", textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>
-                  Safer Alternatives to {d.query?.newPrescription || "Prescribed Drug"}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#0D3D3A", textTransform: "uppercase", letterSpacing: 1 }}>
+                    Safer Alternatives to {d.query?.newPrescription || "Prescribed Drug"}
+                  </div>
+                  <LogicBadge label="Gemini Generated" color="#1565c0" bg="#e3f2fd" />
                 </div>
                 <div style={{ display: "flex", flexDirection: "column" }}>
                   {d.alternatives.map((alt, i) => {
@@ -658,6 +793,14 @@ export default function RxGuardDashboard() {
         )}
 
         {/* Stat Cards */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#0D3D3A", fontFamily: "DM Sans, sans-serif", textTransform: "uppercase", letterSpacing: 1 }}>Adverse Event Statistics</span>
+          <LogicBadge
+            label={d.faersSource === "gemini_estimate" ? "Gemini Estimate" : "FDA FAERS"}
+            color={d.faersSource === "gemini_estimate" ? "#1565c0" : "#2e7d32"}
+            bg={d.faersSource === "gemini_estimate" ? "#e3f2fd" : "#e8f5e9"}
+          />
+        </div>
         <div style={{ display: "flex", gap: 24, marginBottom: 28, flexWrap: "wrap" }}>
           <StatCard label="Total Reports" value={d.totalReports} sub="FDA adverse event reports" color="#2A7D6F" icon="📊" delay={0.1} />
           <StatCard label="Deaths" value={d.outcomes.deaths} sub={d.totalReports ? `${((d.outcomes.deaths/d.totalReports)*100).toFixed(1)}% of reports` : "No data"} color="#2A7D6F" icon="💀" delay={0.2} />
@@ -730,7 +873,7 @@ export default function RxGuardDashboard() {
         )}
 
         {/* Similar Cases Table */}
-        <SectionCard title="Most Similar Patient Cases" subtitle="Ranked by semantic similarity to your patient profile">
+        <SectionCard title={<div style={{ display: "flex", alignItems: "center", gap: 10 }}><span>Most Similar Patient Cases</span><LogicBadge label="V3 Vector + Ranker" /></div>} subtitle="Ranked by semantic similarity to your patient profile">
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
@@ -793,8 +936,11 @@ export default function RxGuardDashboard() {
               gap: 12,
             }}>
               <div>
-                <div style={{ fontSize: 28, fontWeight: 700, color: "#0D3D3A", lineHeight: 1.2 }}>
-                  Sphinx EDA
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: "#0D3D3A", lineHeight: 1.2 }}>
+                    Sphinx EDA
+                  </div>
+                  <LogicBadge label="Statistical Analysis" color="#0D3D3A" bg="#e0e5e3" />
                 </div>
                 <div style={{ fontSize: 13, color: "#888", marginTop: 4 }}>
                   Exploratory data analysis across co-occurring drugs in matched cases

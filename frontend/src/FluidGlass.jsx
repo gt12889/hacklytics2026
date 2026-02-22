@@ -28,7 +28,7 @@ export default function FluidGlass({
   const rawOverrides = mode === 'bar' ? barProps : mode === 'cube' ? cubeProps : lensProps;
 
   return (
-    <Canvas camera={{ position: [0, 0, 20], fov: 15 }} gl={{ alpha: true }} style={{ background: 'transparent' }}>
+    <Canvas camera={{ position: [0, 0, 20], fov: 15 }} gl={{ alpha: true }} style={{ background: 'transparent', pointerEvents: 'none' }}>
       <Wrapper modeProps={rawOverrides} bgColor={bgColor}>
         {children}
         <Preload />

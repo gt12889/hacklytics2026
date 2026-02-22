@@ -195,6 +195,13 @@ export default function LandingPage() {
           0%, 100% { transform: translateX(-50%) translateY(0); }
           50% { transform: translateX(-50%) translateY(12px); }
         }
+        @keyframes subtleFloat {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
+        }
+        .float-title { animation: subtleFloat 4s ease-in-out infinite; }
+        .float-title-slow { animation: subtleFloat 5s ease-in-out 0.5s infinite; }
+        .float-title-slower { animation: subtleFloat 6s ease-in-out 1s infinite; }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #E8EBE4; }
         ::-webkit-scrollbar-thumb { background: #c4d9d6; border-radius: 3px; }
@@ -245,7 +252,7 @@ export default function LandingPage() {
               }}>
                 Hacklytics 2026
               </div>
-              <h1 style={{
+              <h1 className="float-title" style={{
                 fontFamily: "Space Mono, monospace",
                 fontSize: 92,
                 fontWeight: 700,
@@ -257,7 +264,7 @@ export default function LandingPage() {
               }}>
                 RXGUARD
               </h1>
-              <p style={{
+              <p className="float-title-slow" style={{
                 fontSize: 26,
                 color: "#1A5C53",
                 fontFamily: "DM Sans, sans-serif",
@@ -363,7 +370,7 @@ export default function LandingPage() {
         }}
       >
         {/* FluidGlass fills entire section background */}
-        <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
+        <div style={{ position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" }}>
           <Suspense fallback={<div style={{ width: "100%", height: "100%", background: "#E8EBE4" }} />}>
             <FluidGlass
               mode="lens"
@@ -393,7 +400,7 @@ export default function LandingPage() {
             }}>
               The Problem
             </div>
-            <h2 style={{
+            <h2 className="float-title" style={{
               fontSize: 36,
               fontWeight: 700,
               color: "#0D3D3A",
@@ -526,7 +533,7 @@ export default function LandingPage() {
           }}>
             Architecture
           </div>
-          <h2 style={{
+          <h2 className="float-title-slow" style={{
             fontSize: 36,
             fontWeight: 700,
             color: "white",
@@ -615,7 +622,7 @@ export default function LandingPage() {
           }}>
             Performance
           </div>
-          <h2 style={{
+          <h2 className="float-title" style={{
             fontSize: 36,
             fontWeight: 700,
             color: "#0D3D3A",
@@ -738,7 +745,7 @@ export default function LandingPage() {
           }}>
             Case Studies
           </div>
-          <h2 style={{
+          <h2 className="float-title-slower" style={{
             fontSize: 36,
             fontWeight: 700,
             color: "white",
@@ -867,7 +874,7 @@ export default function LandingPage() {
           }}>
             Tech
           </div>
-          <h2 style={{
+          <h2 className="float-title-slow" style={{
             fontSize: 36,
             fontWeight: 700,
             color: "#0D3D3A",
@@ -944,7 +951,7 @@ export default function LandingPage() {
           ...fadeStyle(ctaVisible),
         }}
       >
-        <h2 style={{
+        <h2 className="float-title" style={{
           fontSize: 40,
           fontWeight: 700,
           color: "white",

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
 function NoDataModal({ onClose, onRetry }) {
@@ -79,6 +79,74 @@ function NoDataModal({ onClose, onRetry }) {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+const PIPELINE_STEPS = [
+  { icon: "Rx", label: "Extracting drugs & patient context", tech: "spaCy + regex NLP" },
+  { icon: "E",  label: "Generating 384-dim embedding", tech: "all-MiniLM-L6-v2" },
+  { icon: "S",  label: "Searching FAERS database", tech: "V3 Vector Search" },
+  { icon: "R",  label: "Ranking by severity & demographics", tech: "Multi-signal ranker" },
+  { icon: "L",  label: "Scanning FDA drug labels", tech: "DailyMed semantic search" },
+  { icon: "AI", label: "Generating clinical analysis", tech: "Gemini 2.5 Flash" },
+];
+
+function PipelineProgress({ active }) {
+  const [step, setStep] = useState(-1);
+
+  useEffect(() => {
+    if (!active) { setStep(-1); return; }
+    setStep(0);
+    const iv = setInterval(() => {
+      setStep(s => s < PIPELINE_STEPS.length - 1 ? s + 1 : s);
+    }, 900);
+    return () => clearInterval(iv);
+  }, [active]);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 0, width: "100%" }}>
+      {PIPELINE_STEPS.map((s, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          {/* Vertical line + node */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 40 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: i < step ? "#2A7D6F" : i === step ? "rgba(42,125,111,0.1)" : "#f0f4f3",
+              border: i === step ? "2px solid #2A7D6F" : "2px solid transparent",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontFamily: "Space Mono, monospace",
+              fontSize: 11, fontWeight: 700,
+              color: i < step ? "white" : i === step ? "#2A7D6F" : "#bbb",
+              transition: "all 0.4s ease",
+              flexShrink: 0,
+            }}>
+              {i < step ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              ) : i === step ? (
+                <span style={{ width: 16, height: 16, border: "2px solid rgba(42,125,111,0.25)", borderTopColor: "#2A7D6F", borderRadius: "50%", display: "inline-block", animation: "spin 0.6s linear infinite" }} />
+              ) : s.icon}
+            </div>
+            {i < PIPELINE_STEPS.length - 1 && (
+              <div style={{ width: 2, height: 16, background: i < step ? "#2A7D6F" : "#e0e5e3", transition: "background 0.4s ease" }} />
+            )}
+          </div>
+          {/* Label */}
+          <div style={{
+            opacity: i <= step ? 1 : 0.35,
+            transform: i <= step ? "translateX(0)" : "translateX(6px)",
+            transition: "all 0.4s ease",
+            paddingBottom: i < PIPELINE_STEPS.length - 1 ? 16 : 0,
+          }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "#0D3D3A", fontFamily: "DM Sans, sans-serif" }}>
+              {s.label}
+            </div>
+            <div style={{ fontSize: 11, color: "#888", fontFamily: "Space Mono, monospace", marginTop: 1 }}>
+              {s.tech}
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -175,6 +243,7 @@ export default function SearchPage() {
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
       `}</style>
 
       <div style={{ marginBottom: 48, textAlign: "center" }}>
@@ -200,8 +269,37 @@ export default function SearchPage() {
           display: "flex",
           flexDirection: "column",
           gap: 24,
+          position: "relative",
+          overflow: "hidden",
         }}
       >
+        {/* Pipeline overlay during loading */}
+        {loading && (
+          <div style={{
+            position: "absolute",
+            inset: 0,
+            background: "rgba(255,255,255,0.95)",
+            backdropFilter: "blur(4px)",
+            borderRadius: 20,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 10,
+            padding: "40px 60px",
+            animation: "fadeIn 0.3s ease",
+          }}>
+            <div style={{
+              fontSize: 12, fontWeight: 700, color: "#2A7D6F",
+              fontFamily: "Space Mono, monospace",
+              letterSpacing: 3, textTransform: "uppercase",
+              marginBottom: 28,
+            }}>
+              Processing Pipeline
+            </div>
+            <PipelineProgress active={loading} />
+          </div>
+        )}
         <div>
           <div style={{ fontSize: 22, fontWeight: 700, color: "#0D3D3A", marginBottom: 8, lineHeight: 1.3 }}>
             Provide your patient's clinical background and the medication you're considering.
