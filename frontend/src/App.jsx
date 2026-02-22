@@ -1,12 +1,13 @@
-import { useState } from "react";
-import RxGuardDashboard from "./rxguard_dashboard";
+import { Routes, Route, Navigate } from "react-router-dom";
 import SearchPage from "./SearchPage";
+import RxGuardDashboard from "./rxguard_dashboard";
 
 export default function App() {
-  const [page, setPage] = useState("search");
-
-  if (page === "search") {
-    return <SearchPage onSearch={() => setPage("dashboard")} />;
-  }
-  return <RxGuardDashboard onNewSearch={() => setPage("search")} />;
+  return (
+    <Routes>
+      <Route path="/home" element={<SearchPage />} />
+      <Route path="/result" element={<RxGuardDashboard />} />
+      <Route path="*" element={<Navigate to="/home" replace />} />
+    </Routes>
+  );
 }

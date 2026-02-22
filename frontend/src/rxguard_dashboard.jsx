@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area } from "recharts";
 
 // ── Mock Data ─────────────────────────────────────────────────────────────────
@@ -224,10 +225,14 @@ function SimilarityBar({ value }) {
 }
 
 // ── Main Dashboard ─────────────────────────────────────────────────────────────
-export default function RxGuardDashboard({ onNewSearch }) {
+export default function RxGuardDashboard() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [expandedCase, setExpandedCase] = useState(null);
   const [hoveredBar, setHoveredBar] = useState(null);
-  const d = MOCK_DATA;
+  const d = location.state?.data || MOCK_DATA;
+
+  const onNewSearch = () => navigate("/home");
 
   return (
     <div style={{
@@ -254,8 +259,10 @@ export default function RxGuardDashboard({ onNewSearch }) {
         <div style={{ marginBottom: 32, animation: "slideUp 0.4s ease both" }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
             <div>
-              <div style={{ fontSize: 36, fontWeight: 700, color: "#0D3D3A", lineHeight: 1.1 }}>
-                Drug Interaction Risk Summary
+              <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+                <div style={{ fontSize: 36, fontWeight: 700, color: "#0D3D3A", lineHeight: 1.1 }}>
+                  Drug Interaction Risk Summary
+                </div>
               </div>
               <div style={{ fontSize: 14, color: "#888", marginTop: 4 }}>
                 {d.query.currentMed} + {d.query.newPrescription} · {d.query.conditions}
@@ -278,6 +285,23 @@ export default function RxGuardDashboard({ onNewSearch }) {
           </div>
         </div>
 
+        {/* Dataset Context Banner */}
+        {d.datasetStats && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 16,
+            background: "#f5f5f5", borderRadius: 10, padding: "10px 20px",
+            marginBottom: 20, animation: "slideUp 0.4s ease 0.1s both",
+            fontSize: 13, color: "#666", fontFamily: "DM Sans, sans-serif",
+          }}>
+            <span style={{ fontWeight: 600, color: "#0D3D3A" }}>Full Dataset:</span>
+            <span>{d.datasetStats.totalReports.toLocaleString()} reports</span>
+            <span style={{ color: "#ccc" }}>·</span>
+            <span>{d.datasetStats.uniqueDrugs.toLocaleString()} drugs</span>
+            <span style={{ color: "#ccc" }}>·</span>
+            <span>{d.datasetStats.uniqueReactions.toLocaleString()} reactions</span>
+          </div>
+        )}
+
         {/* Stat Cards */}
         <div style={{ display: "flex", gap: 24, marginBottom: 28, flexWrap: "wrap" }}>
           <StatCard label="Total Reports" value={d.totalReports} sub="Serious events only" color="#2A7D6F" icon="📊" delay={0.1} />
@@ -285,6 +309,49 @@ export default function RxGuardDashboard({ onNewSearch }) {
           <StatCard label="Hospitalized" value={d.outcomes.hospitalized} sub={`${((d.outcomes.hospitalized/d.totalReports)*100).toFixed(1)}% of reports`} color="#2A7D6F" icon="🏥" delay={0.3} />
           <StatCard label="Life-Threatening" value={d.outcomes.lifeThreatening} sub={`${((d.outcomes.lifeThreatening/d.totalReports)*100).toFixed(1)}% of reports`} color="#2A7D6F" icon="⚡" delay={0.4} />
         </div>
+
+        {/* Severity Distribution */}
+        {d.severityBreakdown && d.severityBreakdown.some(s => s.count > 0) && (
+          <div style={{ marginBottom: 28 }}>
+            <SectionCard title="Severity Distribution" subtitle="Risk profile for this drug pair">
+              <ResponsiveContainer width="100%" height={100}>
+                <BarChart
+                  data={[d.severityBreakdown.reduce((acc, s) => ({ ...acc, [s.severity]: s.count }), {})]}
+                  layout="vertical"
+                  margin={{ left: 0, right: 20, top: 8, bottom: 8 }}
+                >
+                  <XAxis type="number" tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey={() => ""} hide />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontSize: 12 }}
+                    formatter={(v, name) => [`${v} reports`, name]}
+                  />
+                  <Bar dataKey="death" stackId="sev" fill="#d32f2f" name="Death" radius={[4, 0, 0, 4]} />
+                  <Bar dataKey="life-threatening" stackId="sev" fill="#ff7f0e" name="Life-Threatening" />
+                  <Bar dataKey="hospitalization" stackId="sev" fill="#1f77b4" name="Hospitalization" />
+                  <Bar dataKey="other" stackId="sev" fill="#aec7e8" name="Other" radius={[0, 4, 4, 0]} />
+                  <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: "#555" }}>{v}</span>} />
+                </BarChart>
+              </ResponsiveContainer>
+            </SectionCard>
+          </div>
+        )}
+
+        {/* Summary & Recommendations */}
+        {(d.summary || d.recommendations) && (
+          <div style={{ display: "grid", gridTemplateColumns: d.summary && d.recommendations ? "1fr 1fr" : "1fr", gap: 24, marginBottom: 28 }}>
+            {d.summary && (
+              <SectionCard title="Clinical Summary">
+                <div style={{ fontSize: 13, color: "#333", lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{d.summary}</div>
+              </SectionCard>
+            )}
+            {d.recommendations && (
+              <SectionCard title="Recommendations">
+                <div style={{ fontSize: 13, color: "#333", lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{d.recommendations}</div>
+              </SectionCard>
+            )}
+          </div>
+        )}
 
         {/* Charts Row */}
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24, marginBottom: 28 }}>
@@ -344,6 +411,31 @@ export default function RxGuardDashboard({ onNewSearch }) {
             </ResponsiveContainer>
           </SectionCard>
         </div>
+
+        {/* Demographic Risk Profile */}
+        {d.demographicRisk && d.demographicRisk.length > 0 && (
+          <div style={{ marginBottom: 28 }}>
+            <SectionCard title="Demographic Risk Profile" subtitle="Mean severity by age group and sex for this drug pair">
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={d.demographicRisk} margin={{ left: 0, right: 20, top: 8, bottom: 8 }}>
+                  <XAxis dataKey="ageGroup" tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} label={{ value: "Mean Severity", angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#aaa" } }} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontSize: 12 }}
+                    formatter={(v, name, props) => {
+                      const countKey = name + "Count";
+                      const count = props.payload[countKey];
+                      return [`${v.toFixed(2)} (n=${count})`, name.charAt(0).toUpperCase() + name.slice(1)];
+                    }}
+                  />
+                  <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: "#555" }}>{v.charAt(0).toUpperCase() + v.slice(1)}</span>} />
+                  <Bar dataKey="male" fill="#1f77b4" name="male" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="female" fill="#e377c2" name="female" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </SectionCard>
+          </div>
+        )}
 
         {/* Similar Cases Table */}
         <SectionCard title="Most Similar Patient Cases" subtitle="Ranked by semantic similarity to your patient profile">
