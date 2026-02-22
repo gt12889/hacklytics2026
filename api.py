@@ -60,9 +60,14 @@ def startup():
 
     print("[RxGuard] Initialising components ...")
 
-    # 1. Load cases (sample data — always available)
-    cases = get_sample_cases()
-    print(f"[RxGuard] Loaded {len(cases)} sample cases")
+    # 1. Load cases — prefer eval corpus (richer) over sample data
+    try:
+        from eval_search import build_eval_corpus
+        cases = build_eval_corpus()
+        print(f"[RxGuard] Loaded {len(cases)} eval corpus cases")
+    except Exception:
+        cases = get_sample_cases()
+        print(f"[RxGuard] Loaded {len(cases)} sample cases (eval corpus unavailable)")
 
     # 2. Query processor (loads sentence-transformer model)
     query_processor = QueryProcessor()
@@ -211,9 +216,8 @@ def _aggregate_from_sample(
 ) -> dict:
     """Derive approximate FAERS stats from sample cases when parquet is unavailable.
 
-    Only counts cases whose drug list contains ALL extracted drugs (exact match
-    on the drug pair), so stats reflect the specific interaction — not
-    semantically similar but different drug combos.
+    Scans the full corpus (not just ranked results) for cases containing BOTH
+    drugs, so stats reflect the specific interaction accurately.
     """
     if not ranked_results or len(drugs) < 2:
         return {
@@ -224,10 +228,10 @@ def _aggregate_from_sample(
             "ageDistribution": [{"range": r, "count": 0} for r in AGE_BINS],
         }
 
-    # Filter to cases that contain BOTH primary drugs
+    # Filter the FULL corpus to cases that contain BOTH primary drugs
     drug_a, drug_b = drugs[0].lower(), drugs[1].lower()
     matched = [
-        (case, scores) for case, scores in ranked_results
+        (case, {}) for case in cases
         if drug_a in [d.lower() for d in case.drugs]
         and drug_b in [d.lower() for d in case.drugs]
     ]
@@ -342,7 +346,7 @@ def _sphinx_context(
                 for label in SEVERITY_ORDER
             ]
 
-    # Fallback: derive from sample cases' outcome_severity
+    # Fallback: derive from full corpus filtered to drug pair
     if "severityBreakdown" not in result and ranked_results:
         outcome_to_sev = {
             "death": "death",
@@ -350,8 +354,20 @@ def _sphinx_context(
             "hospitalization": "hospitalization",
             "non-serious": "other",
         }
+        # Use full corpus filtered to drug pair (same as _aggregate_from_sample)
+        if len(drugs) >= 2:
+            drug_a, drug_b = drugs[0].lower(), drugs[1].lower()
+            sev_source = [
+                c for c in cases
+                if drug_a in [d.lower() for d in c.drugs]
+                and drug_b in [d.lower() for d in c.drugs]
+            ]
+        else:
+            sev_source = [case for case, _ in ranked_results]
+        if not sev_source:
+            sev_source = [case for case, _ in ranked_results]
         sev_counts = {}
-        for case, _ in ranked_results:
+        for case in sev_source:
             label = outcome_to_sev.get(case.outcome_severity, "other")
             sev_counts[label] = sev_counts.get(label, 0) + case.faers_matches
         result["severityBreakdown"] = [
@@ -437,13 +453,25 @@ def _sphinx_context(
         except Exception as e:
             print(f"[RxGuard] Per-query heatmap error: {e}")
 
-    # Heatmap fallback from ranked_results
+    # Heatmap fallback from full corpus (scoped to drug pair)
     if "heatmap" not in result and ranked_results:
         try:
             from collections import Counter
+            # Use full corpus filtered to drug pair
+            if len(drugs) >= 2:
+                drug_a, drug_b = drugs[0].lower(), drugs[1].lower()
+                hm_cases = [
+                    c for c in cases
+                    if drug_a in [d.lower() for d in c.drugs]
+                    and drug_b in [d.lower() for d in c.drugs]
+                ]
+            else:
+                hm_cases = [case for case, _ in ranked_results]
+            if not hm_cases:
+                hm_cases = [case for case, _ in ranked_results]
             drug_counter = Counter()
             case_drugs_list = []
-            for case, _ in ranked_results:
+            for case in hm_cases:
                 dlist = [d.lower() for d in case.drugs]
                 case_drugs_list.append((dlist, getattr(case, "outcome_severity", "non-serious")))
                 for d in dlist:
@@ -507,12 +535,23 @@ def _sphinx_context(
         except Exception as e:
             print(f"[RxGuard] Per-query severityByPair error: {e}")
 
-    # severityByPair fallback from ranked_results
+    # severityByPair fallback from full corpus (scoped to drug pair)
     if "severityByPair" not in result and ranked_results:
         try:
             sev_map = {"death": "death", "serious": "lifeThreatening", "hospitalization": "hospitalization", "non-serious": "other"}
+            if len(drugs) >= 2:
+                drug_a, drug_b = drugs[0].lower(), drugs[1].lower()
+                sbp_cases = [
+                    c for c in cases
+                    if drug_a in [d.lower() for d in c.drugs]
+                    and drug_b in [d.lower() for d in c.drugs]
+                ]
+            else:
+                sbp_cases = [case for case, _ in ranked_results]
+            if not sbp_cases:
+                sbp_cases = [case for case, _ in ranked_results]
             pair_counts = {}
-            for case, _ in ranked_results:
+            for case in sbp_cases:
                 sev_label = sev_map.get(case.outcome_severity, "other")
                 dlist = sorted(set(d.lower() for d in case.drugs))
                 for a, b in combinations(dlist, 2):
@@ -550,7 +589,7 @@ def _build_similar_cases(ranked_results: list, limit: int = 5) -> list[dict]:
             "age": case.age or 0,
             "sex": case.sex.title() if case.sex else "Unknown",
             "drugs": ", ".join(d.title() for d in case.drugs),
-            "reactions": case.description[:120],
+            "reactions": case.description,
             "outcome": OUTCOME_MAP.get(case.outcome_severity, case.outcome_severity),
             "similarity": min(similarity, 99),
             "outcomeType": OUTCOME_TYPE_MAP.get(
