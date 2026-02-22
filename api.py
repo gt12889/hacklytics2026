@@ -319,14 +319,13 @@ def _aggregate_from_sample(
         }
 
     # Filter the FULL corpus to cases that contain BOTH primary drugs
-    drug_a, drug_b = drugs[0].lower(), drugs[1].lower()
+    drug_a = normalize_drug(drugs[0])
+    drug_b = normalize_drug(drugs[1])
     matched = [
         (case, {}) for case in cases
-        if drug_a in [d.lower() for d in case.drugs]
-        and drug_b in [d.lower() for d in case.drugs]
+        if drug_a in [normalize_drug(d) for d in case.drugs]
+        and drug_b in [normalize_drug(d) for d in case.drugs]
     ]
-    if not matched:
-        matched = ranked_results  # fallback if no exact pair match
 
     # Total reports: sum faers_matches across matched cases
     total = sum(case.faers_matches for case, _ in matched)
@@ -346,17 +345,17 @@ def _aggregate_from_sample(
     )
 
     # Top reactions: use drug-specific knowledge or generic
-    drug_key = frozenset(d.lower() for d in drugs[:2])
-    reaction_names = DRUG_REACTIONS.get(drug_key, [
-        "Adverse reaction", "Nausea", "Dizziness",
-        "Headache", "Fatigue", "Rash",
-    ])
-    # Distribute total across reactions with decreasing weight
     top_reactions = []
-    for i, name in enumerate(reaction_names[:6]):
-        weight = 1.0 / (1.0 + i * 0.4)
-        count = max(1, int(total * 0.08 * weight))
-        top_reactions.append({"name": name, "count": count})
+    if total > 0:
+        drug_key = frozenset(normalize_drug(d) for d in drugs[:2])
+        reaction_names = DRUG_REACTIONS.get(drug_key, [
+            "Adverse reaction", "Nausea", "Dizziness",
+            "Headache", "Fatigue", "Rash",
+        ])
+        for i, name in enumerate(reaction_names[:6]):
+            weight = 1.0 / (1.0 + i * 0.4)
+            count = max(1, int(total * 0.08 * weight))
+            top_reactions.append({"name": name, "count": count})
 
     # Sex split from matched cases
     females = sum(1 for c, _ in matched if c.sex and c.sex.lower() == "female")
@@ -777,11 +776,10 @@ def suggestions():
     """Return sorted drug names and example queries for type-ahead UI."""
     drugs_sorted = sorted(DRUG_DICTIONARY)
 
-    # Build example queries from sample cases, deduplicated by drug pair
-    sample_cases = get_sample_cases()
+    # Build example queries from the loaded corpus, deduplicated by drug pair
     seen_pairs = set()
     examples = []
-    for case in sample_cases:
+    for case in cases:
         if len(case.drugs) < 2:
             continue
         pair = frozenset(d.lower() for d in case.drugs[:2])

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
 export default function SearchPage() {
@@ -6,6 +6,14 @@ export default function SearchPage() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [examples, setExamples] = useState([]);
+
+  useEffect(() => {
+    fetch("/api/suggestions")
+      .then(res => res.json())
+      .then(d => setExamples(d.examples || []))
+      .catch(() => {});
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -113,6 +121,39 @@ export default function SearchPage() {
           onFocus={e => e.target.style.borderColor = "#2A7D6F"}
           onBlur={e => e.target.style.borderColor = "#e0e5e3"}
         />
+
+        {examples.length > 0 && !loading && (
+          <div>
+            <div style={{ fontSize: 12, color: "#aaa", marginBottom: 8, fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>
+              Try an example
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {examples.map((ex, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setQuery(ex.query)}
+                  style={{
+                    background: query === ex.query ? "#0D3D3A" : "#f0f4f3",
+                    color: query === ex.query ? "white" : "#0D3D3A",
+                    border: "1px solid #c4d9d6",
+                    borderRadius: 20,
+                    padding: "6px 14px",
+                    fontSize: 13,
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    fontFamily: "DM Sans, sans-serif",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseOver={e => { if (query !== ex.query) { e.currentTarget.style.background = "#e0ebe8"; } }}
+                  onMouseOut={e => { if (query !== ex.query) { e.currentTarget.style.background = "#f0f4f3"; } }}
+                >
+                  {ex.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {error && (
           <div style={{
