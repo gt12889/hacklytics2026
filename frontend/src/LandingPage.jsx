@@ -318,6 +318,7 @@ export default function LandingPage() {
                 loop
                 muted
                 playsInline
+                onTimeUpdate={e => { if (e.target.currentTime >= 5) e.target.currentTime = 0; }}
                 style={{
                   width: "100%",
                   height: "100%",
