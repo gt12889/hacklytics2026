@@ -359,64 +359,68 @@ export default function RxGuardDashboard() {
           </div>
         )}
 
-        {/* Charts Row */}
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24, marginBottom: 28 }}>
+        {/* Charts Row — only show when we have report data */}
+        {d.totalReports > 0 && d.topReactions && d.topReactions.length > 0 && (
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24, marginBottom: 28 }}>
 
-          {/* Top Reactions */}
-          <SectionCard title="Top Reported Reactions" subtitle={`Across ${d.totalReports.toLocaleString()} matched reports`}>
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={d.topReactions} layout="vertical" margin={{ left: 20, right: 20 }}>
-                <XAxis type="number" tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: "#555" }} axisLine={false} tickLine={false} width={140} />
-                <Tooltip
-                  contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontSize: 12 }}
-                  labelStyle={{ color: "#0D3D3A", fontWeight: 700, marginBottom: 2 }}
-                  itemStyle={{ color: "#555" }}
-                  formatter={(v) => [`${v} reports`]}
-                  cursor={false}
-                />
-                <Bar dataKey="count" radius={[0, 6, 6, 0]} onMouseEnter={(_, i) => setHoveredBar(i)} onMouseLeave={() => setHoveredBar(null)}>
-                  {d.topReactions.map((_, i) => (
-                    <Cell key={i} fill={hoveredBar === i ? "#0D3D3A" : "#2A7D6F"} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </SectionCard>
+            {/* Top Reactions */}
+            <SectionCard title="Top Reported Reactions" subtitle={`Across ${d.totalReports.toLocaleString()} matched reports`}>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={d.topReactions} layout="vertical" margin={{ left: 20, right: 20 }}>
+                  <XAxis type="number" tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: "#555" }} axisLine={false} tickLine={false} width={140} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontSize: 12 }}
+                    labelStyle={{ color: "#0D3D3A", fontWeight: 700, marginBottom: 2 }}
+                    itemStyle={{ color: "#555" }}
+                    formatter={(v) => [`${v} reports`]}
+                    cursor={false}
+                  />
+                  <Bar dataKey="count" radius={[0, 6, 6, 0]} onMouseEnter={(_, i) => setHoveredBar(i)} onMouseLeave={() => setHoveredBar(null)}>
+                    {d.topReactions.map((_, i) => (
+                      <Cell key={i} fill={hoveredBar === i ? "#0D3D3A" : "#2A7D6F"} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </SectionCard>
 
-          {/* Sex Split */}
-          <SectionCard title="Sex Distribution" subtitle="Among matched cases">
-            <ResponsiveContainer width="100%" height={240}>
-              <PieChart>
-                <Pie data={d.sexSplit} cx="50%" cy="50%" innerRadius={60} outerRadius={90} dataKey="value" paddingAngle={3}>
-                  {d.sexSplit.map((_, i) => <Cell key={i} fill={SEX_COLORS[i]} />)}
-                </Pie>
-                <Legend iconType="circle" iconSize={10} formatter={(v) => <span style={{ fontSize: 12, color: "#555" }}>{v}</span>} />
-                <Tooltip formatter={(v) => [`${v}%`]} contentStyle={{ borderRadius: 8, border: "none", fontSize: 12 }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </SectionCard>
-        </div>
+            {/* Sex Split */}
+            <SectionCard title="Sex Distribution" subtitle="Among matched cases">
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart>
+                  <Pie data={d.sexSplit} cx="50%" cy="50%" innerRadius={60} outerRadius={90} dataKey="value" paddingAngle={3}>
+                    {d.sexSplit.map((_, i) => <Cell key={i} fill={SEX_COLORS[i]} />)}
+                  </Pie>
+                  <Legend iconType="circle" iconSize={10} formatter={(v) => <span style={{ fontSize: 12, color: "#555" }}>{v}</span>} />
+                  <Tooltip formatter={(v) => [`${v}%`]} contentStyle={{ borderRadius: 8, border: "none", fontSize: 12 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </SectionCard>
+          </div>
+        )}
 
-        {/* Age Distribution */}
-        <div style={{ marginBottom: 28 }}>
-          <SectionCard title="Age Distribution of Matched Reports" subtitle="Hover to see exact counts">
-            <ResponsiveContainer width="100%" height={180}>
-              <AreaChart data={d.ageDistribution} margin={{ left: 0, right: 20 }}>
-                <defs>
-                  <linearGradient id="ageGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2A7D6F" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#2A7D6F" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="range" tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ borderRadius: 8, border: "none", fontSize: 12 }} formatter={(v) => [`${v} reports`]} />
-                <Area type="monotone" dataKey="count" stroke="#2A7D6F" strokeWidth={2} fill="url(#ageGrad)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </SectionCard>
-        </div>
+        {/* Age Distribution — only show when we have data */}
+        {d.totalReports > 0 && d.ageDistribution && d.ageDistribution.some(a => a.count > 0) && (
+          <div style={{ marginBottom: 28 }}>
+            <SectionCard title="Age Distribution of Matched Reports" subtitle="Hover to see exact counts">
+              <ResponsiveContainer width="100%" height={180}>
+                <AreaChart data={d.ageDistribution} margin={{ left: 0, right: 20 }}>
+                  <defs>
+                    <linearGradient id="ageGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#2A7D6F" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#2A7D6F" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="range" tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ borderRadius: 8, border: "none", fontSize: 12 }} formatter={(v) => [`${v} reports`]} />
+                  <Area type="monotone" dataKey="count" stroke="#2A7D6F" strokeWidth={2} fill="url(#ageGrad)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </SectionCard>
+          </div>
+        )}
 
         {/* Similar Cases Table */}
         <SectionCard title="Most Similar Patient Cases" subtitle="Ranked by semantic similarity to your patient profile">
