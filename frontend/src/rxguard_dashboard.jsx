@@ -231,6 +231,7 @@ export default function RxGuardDashboard() {
   const [expandedCase, setExpandedCase] = useState(null);
   const [hoveredBar, setHoveredBar] = useState(null);
   const d = location.state?.data || MOCK_DATA;
+  const parsed = location.state?.parsed || null;
 
   const onNewSearch = () => navigate("/home");
 
@@ -265,7 +266,12 @@ export default function RxGuardDashboard() {
                 </div>
               </div>
               <div style={{ fontSize: 14, color: "#888", marginTop: 4 }}>
-                {d.query.currentMed} + {d.query.newPrescription} · {d.query.conditions}
+                {parsed ? [
+                  parsed.age != null ? `${parsed.age} yrs` : null,
+                  parsed.sex === 1 ? "Male" : parsed.sex === 2 ? "Female" : null,
+                  ...(parsed.preexisting_conditions || []),
+                  ...(parsed.prescribed_medications || []),
+                ].filter(Boolean).join(", ") : `${d.query.currentMed} + ${d.query.newPrescription} · ${d.query.conditions}`}
               </div>
             </div>
             <button style={{
@@ -285,6 +291,40 @@ export default function RxGuardDashboard() {
           </div>
         </div>
 
+        {/* Gemini Parsed Patient Info */}
+        {parsed && (
+          <div style={{
+            background: "white",
+            borderRadius: 16,
+            padding: "20px 28px",
+            marginBottom: 28,
+            boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
+            borderLeft: "4px solid #2A7D6F",
+            animation: "slideUp 0.4s ease both",
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#2A7D6F", textTransform: "uppercase", letterSpacing: 1, marginBottom: 12 }}>
+              Patient Summary
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "12px 32px", fontSize: 14, color: "#0D3D3A" }}>
+              {parsed.age != null && (
+                <div><span style={{ color: "#888" }}>Age: </span><strong>{parsed.age}</strong></div>
+              )}
+              {parsed.sex != null && (
+                <div><span style={{ color: "#888" }}>Sex: </span><strong>{parsed.sex === 1 ? "Male" : parsed.sex === 2 ? "Female" : "Unknown"}</strong></div>
+              )}
+              {parsed.preexisting_conditions?.length > 0 && (
+                <div><span style={{ color: "#888" }}>Conditions: </span><strong>{parsed.preexisting_conditions.join(", ")}</strong></div>
+              )}
+              {parsed.current_medications?.length > 0 && (
+                <div><span style={{ color: "#888" }}>Current Meds: </span><strong>{parsed.current_medications.join(", ")}</strong></div>
+              )}
+              {parsed.prescribed_medications?.length > 0 && (
+                <div><span style={{ color: "#888" }}>Prescribed: </span><strong>{parsed.prescribed_medications.join(", ")}</strong></div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Stat Cards */}
         <div style={{ display: "flex", gap: 24, marginBottom: 28, flexWrap: "wrap" }}>
           <StatCard label="Total Reports" value={d.totalReports} sub="Serious events only" color="#2A7D6F" icon="📊" delay={0.1} />
@@ -292,22 +332,6 @@ export default function RxGuardDashboard() {
           <StatCard label="Hospitalized" value={d.outcomes.hospitalized} sub={`${((d.outcomes.hospitalized/d.totalReports)*100).toFixed(1)}% of reports`} color="#2A7D6F" icon="🏥" delay={0.3} />
           <StatCard label="Life-Threatening" value={d.outcomes.lifeThreatening} sub={`${((d.outcomes.lifeThreatening/d.totalReports)*100).toFixed(1)}% of reports`} color="#2A7D6F" icon="⚡" delay={0.4} />
         </div>
-
-        {/* Summary & Recommendations */}
-        {(d.summary || d.recommendations) && (
-          <div style={{ display: "grid", gridTemplateColumns: d.summary && d.recommendations ? "1fr 1fr" : "1fr", gap: 24, marginBottom: 28 }}>
-            {d.summary && (
-              <SectionCard title="Clinical Summary">
-                <div style={{ fontSize: 13, color: "#333", lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{d.summary}</div>
-              </SectionCard>
-            )}
-            {d.recommendations && (
-              <SectionCard title="Recommendations">
-                <div style={{ fontSize: 13, color: "#333", lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{d.recommendations}</div>
-              </SectionCard>
-            )}
-          </div>
-        )}
 
         {/* Charts Row */}
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24, marginBottom: 28 }}>

@@ -12,17 +12,29 @@ export default function SearchPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query, engine: "v3" }),
-      });
-      if (!res.ok) {
-        const detail = await res.json().catch(() => ({}));
-        throw new Error(detail.detail || `Server error ${res.status}`);
+      // Call both endpoints in parallel
+      const [searchRes, parseRes] = await Promise.all([
+        fetch("/api/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query, engine: "v3" }),
+        }),
+        fetch("/api/parse", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: query }),
+        }),
+      ]);
+
+      if (!searchRes.ok) {
+        const detail = await searchRes.json().catch(() => ({}));
+        throw new Error(detail.detail || `Server error ${searchRes.status}`);
       }
-      const data = await res.json();
-      navigate("/result", { state: { data } });
+
+      const data = await searchRes.json();
+      const parsed = parseRes.ok ? await parseRes.json().catch(() => null) : null;
+
+      navigate("/result", { state: { data, parsed } });
     } catch (err) {
       setError(err.message);
     } finally {
