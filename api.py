@@ -690,6 +690,103 @@ def analysis():
     }
 
 
+# ── Search-compare endpoint (per-query, all engines) ─────────────────────────
+
+class CompareRequest(BaseModel):
+    query: str
+
+
+@app.post("/api/search-compare")
+def search_compare(req: CompareRequest):
+    """Run a query through all 4 engines and return side-by-side results + metrics."""
+    if not query_processor:
+        raise HTTPException(status_code=503, detail="Server still starting up")
+
+    try:
+        processed = query_processor.process_query(req.query)
+        drugs = processed["drugs"]
+        context = processed["context"]
+        embedding = processed["embedding"]
+
+        # Run all 4 engines
+        v1_results = v1_search.search(drugs, cases)
+        v2_results = v2_search.search(req.query)
+        v3_results = v3_search.search(embedding)
+        v3r_results = ranker.rank_results(v3_results, context)
+
+        # Ground truth (if 2+ drugs extracted)
+        relevant_ids = set()
+        has_ground_truth = False
+        if len(drugs) >= 2:
+            pair = (normalize_drug(drugs[0]), normalize_drug(drugs[1]))
+            relevant_ids = get_relevant_ids(cases, pair)
+            has_ground_truth = len(relevant_ids) > 0
+
+        def _extract_similarity(item):
+            """Extract similarity score from either (case, float) or (case, dict)."""
+            case, score_or_dict = item
+            if isinstance(score_or_dict, dict):
+                return int(round(score_or_dict.get("semantic_similarity", 0) * 100))
+            return int(round(float(score_or_dict) * 100))
+
+        def _format_results(results, limit=10):
+            formatted = []
+            for rank, (case, score_or_dict) in enumerate(results[:limit], 1):
+                sim = _extract_similarity((case, score_or_dict))
+                formatted.append({
+                    "rank": rank,
+                    "caseId": case.case_id,
+                    "drugs": ", ".join(d.title() for d in case.drugs),
+                    "age": case.age or 0,
+                    "sex": (case.sex or "Unknown").title(),
+                    "outcome": OUTCOME_MAP.get(case.outcome_severity, case.outcome_severity),
+                    "outcomeType": OUTCOME_TYPE_MAP.get(case.outcome_severity, "other"),
+                    "similarity": min(sim, 99),
+                    "description": case.description or "",
+                })
+            return formatted
+
+        def _engine_metrics(results):
+            if not has_ground_truth:
+                return None
+            ids = [c.case_id for c, _ in results]
+            return compute_metrics(ids, relevant_ids)
+
+        engines = []
+        for label, results in [("V1", v1_results), ("V2", v2_results), ("V3", v3_results), ("V3+R", v3r_results)]:
+            metrics = _engine_metrics(results)
+            # Round metric values for JSON
+            if metrics:
+                metrics = {k: round(v, 4) if v is not None else None for k, v in metrics.items()}
+            engines.append({
+                "engine": label,
+                "results": _format_results(results),
+                "metrics": metrics,
+            })
+
+        # Drug names for display
+        query_lower = req.query.lower()
+        ordered_drugs = sorted(drugs, key=lambda d: query_lower.find(d.lower()))
+        current_med = ordered_drugs[0].title() if len(ordered_drugs) >= 1 else "Unknown"
+        new_rx = ordered_drugs[1].title() if len(ordered_drugs) >= 2 else "Unknown"
+
+        return {
+            "query": {
+                "original": req.query,
+                "currentMed": current_med,
+                "newPrescription": new_rx,
+                "drugs": [d.title() for d in drugs],
+            },
+            "engines": engines,
+            "relevantCount": len(relevant_ids) if has_ground_truth else None,
+            "corpusSize": len(cases),
+        }
+
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ── Main endpoint ────────────────────────────────────────────────────────────
 
 @app.post("/api/search")

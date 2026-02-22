@@ -4,7 +4,7 @@ Formats results with LLM summarization via Gemini API
 """
 import os
 from typing import List, Dict, Tuple
-import google.generativeai as genai
+from google import genai
 from data_models import FAERSCase
 from dotenv import load_dotenv
 
@@ -12,15 +12,16 @@ load_dotenv()
 
 class ResponseGenerator:
     """Generates natural language responses using Gemini API"""
-    
+
     def __init__(self, api_key: str = None):
         """Initialize Gemini API"""
         api_key = api_key or os.getenv('GEMINI_API_KEY')
         if api_key:
-            genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel('gemini-pro')
+            self.client = genai.Client(api_key=api_key)
+            self.model_name = 'gemini-2.0-flash'
         else:
-            self.model = None
+            self.client = None
+            self.model_name = None
             print("Warning: GEMINI_API_KEY not found. LLM features will be disabled.")
     
     def format_case_summary(self, case: FAERSCase, score_details: Dict) -> str:
@@ -96,16 +97,16 @@ class ResponseGenerator:
                            top_cases: List[Tuple[FAERSCase, Dict]],
                            risk_score: float) -> str:
         """Generate natural language summary using Gemini API"""
-        if not self.model:
+        if not self.client:
             return self.generate_recommendations(drugs, top_cases, {})
-        
+
         # Build prompt
         cases_text = "\n\n".join([
             f"Case {i+1}: {case.description} (Outcome: {case.outcome_severity}, FAERS: {case.faers_matches})"
             for i, (case, _) in enumerate(top_cases[:3])
         ])
-        
-        prompt = f"""You are a clinical pharmacist analyzing drug interaction risks. 
+
+        prompt = f"""You are a clinical pharmacist analyzing drug interaction risks.
 
 Query: "{query}"
 Drugs identified: {', '.join(drugs)}
@@ -120,9 +121,12 @@ Provide a concise clinical summary (2-3 sentences) highlighting:
 3. A brief recommendation
 
 Keep it professional and clinical."""
-        
+
         try:
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt,
+            )
             return response.text
         except Exception as e:
             print(f"Error generating LLM summary: {e}")
@@ -166,7 +170,7 @@ Keep it professional and clinical."""
         top_cases = ranked_results[:5]
         
         # Generate summary
-        if use_llm and self.model:
+        if use_llm and self.client:
             summary = self.generate_llm_summary(query, drugs, top_cases, risk_score)
         else:
             summary = self.generate_recommendations(drugs, top_cases, query_context)
