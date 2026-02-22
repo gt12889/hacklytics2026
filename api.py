@@ -28,6 +28,7 @@ from response_generator import ResponseGenerator
 from sample_data import get_sample_cases
 from data_models import FAERSCase
 from src.gemini_parser import parse_patient_text
+from eval_search import get_relevant_ids, compute_metrics, normalize_drug
 
 # ── App setup ────────────────────────────────────────────────────────────────
 
@@ -574,6 +575,50 @@ def parse(req: ParseRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+def _compute_retrieval_eval(
+    query_text: str, drugs: list[str], processed: dict, current_engine: str
+) -> dict | None:
+    """Compute retrieval eval metrics across all 4 engines for dashboard comparison."""
+    if len(drugs) < 2:
+        return None
+
+    d1 = normalize_drug(drugs[0])
+    d2 = normalize_drug(drugs[1])
+
+    relevant_ids = get_relevant_ids(cases, (d1, d2))
+    if not relevant_ids:
+        return None
+
+    engine_map = {"v1": "V1", "v2": "V2", "v3": "V3"}
+    active_label = engine_map.get(current_engine.lower(), "V3")
+
+    embedding = processed["embedding"]
+    context = processed["context"]
+
+    v1_ids = [c.case_id for c, _ in v1_search.search(drugs, cases)]
+    v2_ids = [c.case_id for c, _ in v2_search.search(query_text)]
+    v3_results = v3_search.search(embedding)
+    v3_ids = [c.case_id for c, _ in v3_results]
+    v3r_ids = [c.case_id for c, _ in ranker.rank_results(v3_results, context)]
+
+    engines_data = []
+    for label, ids in [("V1", v1_ids), ("V2", v2_ids), ("V3", v3_ids), ("V3+R", v3r_ids)]:
+        metrics = compute_metrics(ids, relevant_ids)
+        metrics = {k: round(v, 4) for k, v in metrics.items()}
+        engines_data.append({
+            "engine": label,
+            "active": label == active_label,
+            "metrics": metrics,
+        })
+
+    return {
+        "drugPair": [d1, d2],
+        "relevantCount": len(relevant_ids),
+        "activeEngine": active_label,
+        "engines": engines_data,
+    }
+
+
 # ── Main endpoint ────────────────────────────────────────────────────────────
 
 @app.post("/api/search")
@@ -620,6 +665,13 @@ def search(req: SearchRequest):
         # 6b. Sphinx EDA context (severity, dataset stats, demographic risk)
         sphinx = _sphinx_context(faers_df, drugs, ranked)
 
+        # 6c. Retrieval evaluation metrics (all engines comparison)
+        try:
+            retrieval_eval = _compute_retrieval_eval(req.query, drugs, processed, req.engine)
+        except Exception as e:
+            print(f"[RxGuard] Retrieval eval error: {e}")
+            retrieval_eval = None
+
         # 7. Determine drug names for header (order by position in query)
         query_lower = req.query.lower()
         ordered_drugs = sorted(drugs, key=lambda d: query_lower.find(d.lower()))
@@ -640,6 +692,7 @@ def search(req: SearchRequest):
             "similarCases": similar_cases,
             "summary": resp.get("summary", ""),
             "recommendations": resp.get("recommendations", ""),
+            "retrievalEval": retrieval_eval,
             **sphinx,
         }
 

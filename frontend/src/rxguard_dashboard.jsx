@@ -500,6 +500,73 @@ export default function RxGuardDashboard() {
           </div>
         </SectionCard>
 
+        {/* ── Retrieval Eval Comparison ──────────────────────────────────── */}
+        {d.retrievalEval && d.retrievalEval.engines && (
+          <div style={{ marginTop: 28, marginBottom: 28 }}>
+            <SectionCard
+              title="Retrieval Engine Comparison"
+              subtitle={`Ground truth: ${d.retrievalEval.relevantCount} relevant cases for ${d.retrievalEval.drugPair[0].charAt(0).toUpperCase() + d.retrievalEval.drugPair[0].slice(1)} + ${d.retrievalEval.drugPair[1].charAt(0).toUpperCase() + d.retrievalEval.drugPair[1].slice(1)}`}
+            >
+              {/* Metrics Table */}
+              <div style={{ overflowX: "auto", marginBottom: 24 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "2px solid #f0f0f0" }}>
+                      {["Engine", "P@5", "P@10", "R@5", "R@10", "NDCG@5", "NDCG@10", "MRR"].map(h => (
+                        <th key={h} style={{ padding: "8px 12px", textAlign: h === "Engine" ? "left" : "right", fontSize: 11, color: "#aaa", fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {d.retrievalEval.engines.map(eng => (
+                      <tr key={eng.engine} style={{
+                        borderBottom: "1px solid #f5f5f5",
+                        background: eng.active ? "#f0fdf4" : "white",
+                      }}>
+                        <td style={{ padding: "10px 12px", fontSize: 13, fontWeight: 700, color: "#0D3D3A", fontFamily: "Space Mono, monospace" }}>
+                          {eng.engine}
+                          {eng.active && <span style={{ marginLeft: 8, background: "#22c55e", color: "white", borderRadius: 20, padding: "2px 8px", fontSize: 10, fontWeight: 600, fontFamily: "DM Sans, sans-serif" }}>ACTIVE</span>}
+                        </td>
+                        {["P@5", "P@10", "R@5", "R@10", "NDCG@5", "NDCG@10", "MRR"].map(m => (
+                          <td key={m} style={{ padding: "10px 12px", textAlign: "right", fontSize: 13, fontFamily: "Space Mono, monospace", color: "#333" }}>
+                            {eng.metrics[m] != null ? (eng.metrics[m] * 100).toFixed(1) + "%" : "—"}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Grouped Bar Chart */}
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart
+                  data={["P@5", "R@10", "NDCG@10", "MRR"].map(m => ({
+                    metric: m,
+                    V1: (d.retrievalEval.engines.find(e => e.engine === "V1")?.metrics[m] || 0),
+                    V2: (d.retrievalEval.engines.find(e => e.engine === "V2")?.metrics[m] || 0),
+                    V3: (d.retrievalEval.engines.find(e => e.engine === "V3")?.metrics[m] || 0),
+                    "V3+R": (d.retrievalEval.engines.find(e => e.engine === "V3+R")?.metrics[m] || 0),
+                  }))}
+                  margin={{ left: 0, right: 20, top: 8, bottom: 8 }}
+                >
+                  <XAxis dataKey="metric" tick={{ fontSize: 12, fill: "#555" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} domain={[0, 1]} tickFormatter={v => `${(v * 100).toFixed(0)}%`} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontSize: 12 }}
+                    formatter={(v, name) => [`${(v * 100).toFixed(1)}%`, name]}
+                  />
+                  <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: "#555" }}>{v}</span>} />
+                  <Bar dataKey="V1" fill="#ef4444" name="V1" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="V2" fill="#f59e0b" name="V2" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="V3" fill="#22c55e" name="V3" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="V3+R" fill="#3b82f6" name="V3+R" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </SectionCard>
+          </div>
+        )}
+
         {/* ── Sphinx EDA Section ─────────────────────────────────────────── */}
         {(d.heatmap || (d.severityByPair && d.severityByPair.length > 0)) && (
           <>
