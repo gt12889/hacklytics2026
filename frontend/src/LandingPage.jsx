@@ -235,7 +235,7 @@ export default function LandingPage() {
           <div style={{ flex: "1 1 50%", minWidth: 0 }}>
             <div style={{ animation: "slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both" }}>
               <div style={{
-                fontSize: 14,
+                fontSize: 17,
                 color: "#2A7D6F",
                 fontFamily: "Space Mono, monospace",
                 letterSpacing: 4,
@@ -247,7 +247,7 @@ export default function LandingPage() {
               </div>
               <h1 style={{
                 fontFamily: "Space Mono, monospace",
-                fontSize: 77,
+                fontSize: 92,
                 fontWeight: 700,
                 letterSpacing: 8,
                 textTransform: "uppercase",
@@ -258,7 +258,7 @@ export default function LandingPage() {
                 RXGUARD
               </h1>
               <p style={{
-                fontSize: 22,
+                fontSize: 26,
                 color: "#1A5C53",
                 fontFamily: "DM Sans, sans-serif",
                 fontWeight: 500,
@@ -268,7 +268,7 @@ export default function LandingPage() {
                 Semantic Drug Interaction Intelligence
               </p>
               <p style={{
-                fontSize: 18,
+                fontSize: 22,
                 color: "rgba(13,61,58,0.55)",
                 maxWidth: 480,
                 marginBottom: 48,
@@ -297,19 +297,20 @@ export default function LandingPage() {
             height: "min(572px, 46vw)",
             borderRadius: 24,
             background: "transparent",
-            border: "3px solid rgba(255,255,255,0.25)",
-            padding: 50,
+            border: "none",
+            padding: 0,
             animation: "fadeIn 1.2s ease 0.4s both",
-            opacity: 0.4,
           }}>
             <div style={{
               width: "100%",
               height: "100%",
-              borderRadius: 12,
+              borderRadius: 24,
               overflow: "hidden",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              WebkitMaskImage: "radial-gradient(ellipse 65% 65% at center, black 35%, transparent 85%)",
+              maskImage: "radial-gradient(ellipse 65% 65% at center, black 35%, transparent 85%)",
             }}>
               <video
                 src="/hero_bg.mp4"
