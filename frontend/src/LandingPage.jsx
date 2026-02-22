@@ -351,99 +351,96 @@ export default function LandingPage() {
       </section>
 
       {/* ════════════════════════════════════════════════════════════════════
-          Section 2: Problem
+          Section 2: Problem — full-section FluidGlass background
       ════════════════════════════════════════════════════════════════════ */}
       <section
         id="problem-section"
         ref={problemRef}
         style={{
-          background: "#E8EBE4",
-          padding: "120px 48px",
+          position: "relative",
+          overflow: "hidden",
           ...fadeStyle(problemVisible),
         }}
       >
-        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-          <div style={{
-            fontSize: 11,
-            color: "#2A7D6F",
-            fontFamily: "Space Mono, monospace",
-            letterSpacing: 3,
-            textTransform: "uppercase",
-            marginBottom: 16,
-            textAlign: "center",
-          }}>
-            The Problem
-          </div>
-          <h2 style={{
-            fontSize: 36,
-            fontWeight: 700,
-            color: "#0D3D3A",
-            fontFamily: "DM Sans, sans-serif",
-            marginBottom: 56,
-            textAlign: "center",
-          }}>
-            The Gap in Drug Safety
-          </h2>
+        {/* FluidGlass fills entire section background */}
+        <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
+          <Suspense fallback={<div style={{ width: "100%", height: "100%", background: "#E8EBE4" }} />}>
+            <FluidGlass
+              mode="lens"
+              bgColor="#E8EBE4"
+              lensProps={{
+                scale: 0.25,
+                ior: 1.15,
+                thickness: 5,
+                chromaticAberration: 0.1,
+                anisotropy: 0.01,
+              }}
+            />
+          </Suspense>
+        </div>
 
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 56,
-            alignItems: "start",
-          }}>
-            {/* Left: explanatory text */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-              <p style={{ fontSize: 15, color: "#333", lineHeight: 1.9 }}>
-                Traditional drug interaction databases rely on keyword matching — exact drug names must appear in the query for a match. But clinicians and patients rarely describe medications that way. A question about "blood thinners and pain medication" returns nothing, even when thousands of adverse events exist in the FDA database.
-              </p>
-              <p style={{ fontSize: 15, color: "#333", lineHeight: 1.9 }}>
-                Brand names versus generic names create another blind spot. Patients say "Advil" while the database indexes "Ibuprofen." Keyword systems cannot bridge this gap without exhaustive synonym tables that are never complete.
-              </p>
-              <p style={{ fontSize: 15, color: "#333", lineHeight: 1.9 }}>
-                Symptom-based signals are lost entirely. When a patient describes "easy bruising and dark stools," keyword search has no mechanism to connect these clinical signs to known hemorrhagic adverse events. <span style={{ color: "#2A7D6F", fontWeight: 600 }}>Semantic search understands the clinical meaning.</span>
-              </p>
+        {/* Content floats above the glass */}
+        <div style={{ position: "relative", zIndex: 1, padding: "120px 48px", pointerEvents: "none" }}>
+          <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+            <div style={{
+              fontSize: 11,
+              color: "#2A7D6F",
+              fontFamily: "Space Mono, monospace",
+              letterSpacing: 3,
+              textTransform: "uppercase",
+              marginBottom: 16,
+              textAlign: "center",
+            }}>
+              The Problem
             </div>
+            <h2 style={{
+              fontSize: 36,
+              fontWeight: 700,
+              color: "#0D3D3A",
+              fontFamily: "DM Sans, sans-serif",
+              marginBottom: 56,
+              textAlign: "center",
+            }}>
+              The Gap in Drug Safety
+            </h2>
 
-            {/* Right: FluidGlass lens + comparison cards */}
-            <div style={{ position: "relative" }}>
-              <div style={{ height: 600, borderRadius: 20, overflow: "hidden" }}>
-                <Suspense fallback={<div style={{ height: 600, background: "#e0ebe8", borderRadius: 20 }} />}>
-                  <FluidGlass
-                    mode="lens"
-                    bgColor="#E8EBE4"
-                    lensProps={{
-                      scale: 0.25,
-                      ior: 1.15,
-                      thickness: 5,
-                      chromaticAberration: 0.1,
-                      anisotropy: 0.01,
-                    }}
-                  />
-                </Suspense>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 56,
+              alignItems: "start",
+            }}>
+              {/* Left: explanatory text */}
+              <div style={{
+                display: "flex", flexDirection: "column", gap: 24,
+                background: "rgba(232, 235, 228, 0.75)",
+                backdropFilter: "blur(12px)",
+                borderRadius: 20,
+                padding: 32,
+              }}>
+                <p style={{ fontSize: 15, color: "#333", lineHeight: 1.9 }}>
+                  Traditional drug interaction databases rely on keyword matching — exact drug names must appear in the query for a match. But clinicians and patients rarely describe medications that way. A question about "blood thinners and pain medication" returns nothing, even when thousands of adverse events exist in the FDA database.
+                </p>
+                <p style={{ fontSize: 15, color: "#333", lineHeight: 1.9 }}>
+                  Brand names versus generic names create another blind spot. Patients say "Advil" while the database indexes "Ibuprofen." Keyword systems cannot bridge this gap without exhaustive synonym tables that are never complete.
+                </p>
+                <p style={{ fontSize: 15, color: "#333", lineHeight: 1.9 }}>
+                  Symptom-based signals are lost entirely. When a patient describes "easy bruising and dark stools," keyword search has no mechanism to connect these clinical signs to known hemorrhagic adverse events. <span style={{ color: "#2A7D6F", fontWeight: 600 }}>Semantic search understands the clinical meaning.</span>
+                </p>
               </div>
 
-              {/* Floating comparison cards on top of glass */}
-              <div style={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                display: "flex",
-                flexDirection: "column",
-                gap: 16,
-                width: "80%",
-                pointerEvents: "none",
-              }}>
+              {/* Right: comparison cards */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 {/* Keyword Search card */}
                 <div style={{
-                  background: "rgba(245, 224, 224, 0.92)",
-                  backdropFilter: "blur(8px)",
+                  background: "rgba(245, 224, 224, 0.88)",
+                  backdropFilter: "blur(12px)",
                   borderRadius: 16,
-                  padding: 24,
-                  border: "1px solid #d4a8a8",
+                  padding: 28,
+                  border: "1px solid rgba(212, 168, 168, 0.6)",
                   display: "flex",
                   flexDirection: "column",
-                  gap: 12,
+                  gap: 16,
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#C0392B" }} />
@@ -456,8 +453,8 @@ export default function LandingPage() {
                     </div>
                   </div>
                   <div style={{
-                    background: "rgba(255,255,255,0.8)", borderRadius: 10,
-                    padding: "12px 14px", fontSize: 13, color: "#555",
+                    background: "rgba(255,255,255,0.7)", borderRadius: 10,
+                    padding: "14px 16px", fontSize: 13, color: "#555",
                     lineHeight: 1.6, fontFamily: "Space Mono, monospace",
                   }}>
                     "72yo on blood thinners + pain med"
@@ -469,14 +466,14 @@ export default function LandingPage() {
 
                 {/* RxGuard card */}
                 <div style={{
-                  background: "rgba(224, 240, 237, 0.92)",
-                  backdropFilter: "blur(8px)",
+                  background: "rgba(224, 240, 237, 0.88)",
+                  backdropFilter: "blur(12px)",
                   borderRadius: 16,
-                  padding: 24,
-                  border: "1px solid #c4d9d6",
+                  padding: 28,
+                  border: "1px solid rgba(196, 217, 214, 0.6)",
                   display: "flex",
                   flexDirection: "column",
-                  gap: 12,
+                  gap: 16,
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#2A7D6F" }} />
@@ -489,8 +486,8 @@ export default function LandingPage() {
                     </div>
                   </div>
                   <div style={{
-                    background: "rgba(255,255,255,0.8)", borderRadius: 10,
-                    padding: "12px 14px", fontSize: 13, color: "#555",
+                    background: "rgba(255,255,255,0.7)", borderRadius: 10,
+                    padding: "14px 16px", fontSize: 13, color: "#555",
                     lineHeight: 1.6, fontFamily: "Space Mono, monospace",
                   }}>
                     "72yo on blood thinners + pain med"
