@@ -1,11 +1,12 @@
 from google import genai
+import os
 import time
 import json
 from dotenv import load_dotenv
 
 load_dotenv()
 
-client = genai.Client()
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 
 def parse_patient_text(text: str) -> dict:
