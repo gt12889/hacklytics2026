@@ -13,3 +13,4 @@ requests>=2.31.0
 tqdm
 pyarrow
 actiancortex
+plotly>=5.0.0

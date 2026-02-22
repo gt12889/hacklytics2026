@@ -3,24 +3,22 @@
 
 ---
 
-7pm 2/21: V1→V2→V3 comparison (Section 5) — ✅ but with placeholder metrics ("~45%, ~63%, ~87% — target estimates")
-Heatmap, demographic charts, temporal trends (Section 8, Analyses 1-5) — ✅ listed under Sphinx but zero implementation specified
-Retrieval quality validation with P@K, R@K, NDCG (Section 8, Analysis 4) — ✅ mentioned, no real numbers
-Outcome severity distribution (Section 8, Analysis 5) — ✅ mentioned
-Test queries (Section 12) — ✅ 20 queries defined
-ROR disproportionality analysis — nowhere in the blueprint, this is a major addition we discovered
-Real vocabulary mismatch quantification (1,532 vs. 1) — blueprint theorized it, we proved it
-Live case retrieval with specific FAERS report IDs — blueprint assumed this but we executed it
-Montelukast psychiatric signal validation against FDA black box warning — not in blueprint
-Indication field analysis for pre-existing condition detection — not in blueprint
+### Implementation Status
 
-WHAT WE BUILT IN OUR SESSIONS THAT'S NOT IN THE BLUEPRINT:
+**Blueprint coverage (implemented):**
+- V1→V2→V3 comparison (Section 5) — placeholder metrics to be replaced with real numbers
+- Heatmap, demographic charts, severity distribution (Section 8, Analyses 1-5)
+- Retrieval quality validation with P@K, R@K, NDCG (Section 8, Analysis 4)
+- 20 test queries defined (Section 12)
 
-ROR disproportionality analysis — nowhere in the blueprint, this is a major addition we discovered
-Real vocabulary mismatch quantification (1,532 vs. 1) — blueprint theorized it, we proved it
-Live case retrieval with specific FAERS report IDs — blueprint assumed this but we executed it
-Montelukast psychiatric signal validation against FDA black box warning — not in blueprint
-Indication field analysis for pre-existing condition detection — not in blueprint
+**Additions beyond the original blueprint:**
+- ROR disproportionality analysis
+- Real vocabulary mismatch quantification (1,532 vs. 1)
+- Live case retrieval with specific FAERS report IDs
+- Montelukast psychiatric signal validation against FDA black box warning
+- Indication field analysis for pre-existing condition detection
+
+---
 
 ## 1. ELEVATOR PITCH (30 seconds)
 

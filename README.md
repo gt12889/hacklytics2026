@@ -79,7 +79,7 @@ pip install -r requirements.txt
    ```
 
 4. **(Optional) Set up Actian VectorAI DB** for production-scale vector search:
-   - See [ACTIAN_SETUP.md](ACTIAN_SETUP.md) for detailed instructions
+   - See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions
    - Download the wheel file from [GitHub](https://github.com/hackmamba-io/actian-vectorAI-db-beta)
    - Install: `pip install actiancortex-0.1.0b1-py3-none-any.whl`
    - Start Docker: `docker compose up -d`
@@ -124,15 +124,32 @@ streamlit run app.py
 
 ```
 hacklytics2026/
-├── app.py                 # Main Streamlit application
-├── query_processor.py     # Query processing and embedding
-├── search_engines.py     # V1, V2, V3 search implementations
-├── results_ranker.py     # Risk scoring and ranking
-├── response_generator.py # Response formatting and LLM integration
-├── data_models.py        # FAERS case data models
-├── sample_data.py        # Sample FAERS cases for testing
-├── requirements.txt      # Python dependencies
-└── README.md            # This file
+├── app.py                   # Main Streamlit application
+├── config.py                # API settings, interaction pairs, pipeline constants
+├── query_processor.py       # Query processing and embedding
+├── search_engines.py        # V1 Keyword, V2 TFIDF, V3 Vector, V3Actian search
+├── results_ranker.py        # Risk scoring and ranking
+├── response_generator.py    # Response formatting and LLM integration
+├── data_models.py           # FAERS case data models
+├── sample_data.py           # Sample FAERS cases for testing
+├── actian_vector_db.py      # Actian VectorAI DB wrapper
+├── run_pipeline.py          # Full FAERS data pipeline runner
+├── run_label_pipeline.py    # DailyMed drug label pipeline
+├── docker-compose.yml       # Docker config for Actian VectorAI DB
+├── requirements.txt         # Python dependencies
+├── src/
+│   ├── data_collector.py    # openFDA API data collection
+│   ├── data_cleaner.py      # FAERS data cleaning and normalization
+│   ├── document_builder.py  # Searchable document chunk builder
+│   ├── vector_store.py      # Embedding generation and vector storage
+│   ├── search.py            # Semantic search with filters
+│   ├── sphinx_eda.py        # EDA charts (heatmap, severity, demographics)
+│   ├── dailymed_ingestion.py    # DailyMed drug label ingestion
+│   ├── label_document_builder.py # Drug label document builder
+│   └── label_vector_store.py    # Drug label vector storage
+└── data/
+    ├── raw/                 # Raw FAERS JSON from openFDA
+    └── processed/           # Cleaned parquet files
 ```
 
 ## 🧪 Testing

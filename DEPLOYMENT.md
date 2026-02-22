@@ -4,7 +4,7 @@ Based on the [Actian VectorAI DB Beta repository](https://github.com/hackmamba-i
 
 ## 📋 Prerequisites
 
-1. Vultr server running (IP: 66.42.91.56)
+1. Vultr server running (IP: YOUR_SERVER_IP)
 2. Docker and Docker Compose installed
 3. Actian VectorAI DB image
 
@@ -13,7 +13,7 @@ Based on the [Actian VectorAI DB Beta repository](https://github.com/hackmamba-i
 ### Step 1: Connect to Your Vultr Server
 
 ```bash
-ssh root@66.42.91.56
+ssh root@YOUR_SERVER_IP
 ```
 
 ### Step 2: Install Docker and Docker Compose
@@ -119,10 +119,10 @@ From your local machine or teammate's machine:
 
 ```bash
 # Test connection (should connect or timeout, not refuse)
-telnet 66.42.91.56 50051
+telnet YOUR_SERVER_IP 50051
 
 # Or using netcat
-nc -zv 66.42.91.56 50051
+nc -zv YOUR_SERVER_IP 50051
 ```
 
 ## 🔧 Configuration for Team Access
@@ -132,7 +132,7 @@ nc -zv 66.42.91.56 50051
 Each teammate should have:
 
 ```bash
-ACTIAN_DB_HOST=66.42.91.56:50051
+ACTIAN_DB_HOST=YOUR_SERVER_IP:50051
 ```
 
 ### Test from a Teammate's Machine
@@ -143,7 +143,7 @@ from actian_vector_db import ActianVectorDB
 from query_processor import QueryProcessor
 
 query_processor = QueryProcessor()
-actian_db = ActianVectorDB(host="66.42.91.56:50051", query_processor=query_processor)
+actian_db = ActianVectorDB(host="YOUR_SERVER_IP:50051", query_processor=query_processor)
 
 try:
     actian_db.connect()
@@ -215,7 +215,7 @@ docker compose up -d --force-recreate
 tar -czf vectoraidb-backup-$(date +%Y%m%d).tar.gz ./data
 
 # Copy to local machine
-scp root@66.42.91.56:/path/to/vectoraidb-backup-*.tar.gz ./
+scp root@YOUR_SERVER_IP:/path/to/vectoraidb-backup-*.tar.gz ./
 ```
 
 ## 🐛 Troubleshooting
@@ -276,7 +276,7 @@ If you get "image not found" error:
 
 ```bash
 # Connect to server
-ssh root@66.42.91.56
+ssh root@YOUR_SERVER_IP
 
 # Navigate to project
 cd hacklytics2026
