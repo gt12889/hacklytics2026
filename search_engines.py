@@ -5,7 +5,7 @@ V2: TFIDF + Cosine Similarity
 V3: Vector Search with embeddings (in-memory)
 V3Actian: Vector Search with Actian VectorAI DB
 """
-from typing import List, Dict, Tuple
+from typing import List, Tuple
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -130,35 +130,9 @@ class V3VectorSearch:
         )
         
         similarities = np.dot(case_embeddings_norm, query_embedding_norm)
-        
+
         # Get top k results
         top_indices = np.argsort(similarities)[::-1][:top_k]
-        
+
         results = [(self.cases[i], float(similarities[i])) for i in top_indices if similarities[i] > 0]
         return results
-
-
-class V3ActianVectorSearch:
-    """V3: Vector Search using Actian VectorAI DB"""
-    
-    def __init__(self, actian_db):
-        """
-        Initialize with Actian VectorAI DB instance
-        
-        Args:
-            actian_db: ActianVectorDB instance
-        """
-        self.actian_db = actian_db
-    
-    def search(self, query_embedding: np.ndarray, top_k: int = 10) -> List[Tuple[FAERSCase, float]]:
-        """
-        Search using Actian VectorAI DB
-        
-        Args:
-            query_embedding: Query embedding vector
-            top_k: Number of results to return
-            
-        Returns:
-            List of (case, similarity_score) tuples
-        """
-        return self.actian_db.search(query_embedding, top_k=top_k)

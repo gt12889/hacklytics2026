@@ -24,4 +24,4 @@ Run the app and check the sidebar - you should see "✅ Actian VectorAI DB Conne
 
 That's it! The app will automatically load cases into the database on first run.
 
-For detailed setup and troubleshooting, see [ACTIAN_SETUP.md](ACTIAN_SETUP.md)
+For detailed setup and troubleshooting, see [DEPLOYMENT.md](DEPLOYMENT.md)

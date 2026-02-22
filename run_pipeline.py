@@ -4,6 +4,7 @@ RxGuard — end-to-end pipeline runner (Phase 1 + Phase 2).
 
 Usage:
     python run_pipeline.py              # run full pipeline
+    python run_pipeline.py --labels     # also run DailyMed label pipeline
     python run_pipeline.py --validate   # only validate existing outputs
 """
 
@@ -20,7 +21,7 @@ from src.data_cleaner import clean_all
 from src.document_builder import build_documents
 
 
-def run_pipeline():
+def run_pipeline(args=None):
     """Execute the full pipeline: collect → clean → build documents → embed & load."""
     print("=" * 60)
     print("RxGuard Pipeline — Phase 1 + Phase 2")
@@ -42,6 +43,12 @@ def run_pipeline():
     print("\n[4/4] Embedding and loading into VectorAI DB...")
     from src.vector_store import embed_and_load
     embed_and_load()
+
+    # Step 5 (optional): DailyMed / drug label pipeline
+    if args and getattr(args, "labels", False):
+        print("\n[5/5] Running DailyMed label pipeline...")
+        from run_label_pipeline import run_label_pipeline
+        run_label_pipeline()
 
     # Validate
     print("\n" + "=" * 60)
@@ -166,6 +173,17 @@ def validate(
                 print("\n  Test search: 'warfarin bleeding'")
                 results = search_faers("warfarin bleeding", top_k=3)
                 print_results(results)
+
+                # Label collection (if present)
+                if client.has_collection(config.VECTORDB_LABELS_COLLECTION):
+                    from src.search import search_labels
+                    lbl_count = client.count(config.VECTORDB_LABELS_COLLECTION, exact=True)
+                    print(f"\n  Labels collection '{config.VECTORDB_LABELS_COLLECTION}': {lbl_count:,} vectors")
+                    lbl_results = search_labels("warfarin ibuprofen bleeding", top_k=2)
+                    if lbl_results:
+                        print("  Label search test:")
+                        for r in lbl_results:
+                            print(f"    [{r['rank']}] {r['section']} — {r['generic_name']} (score={r['score']})")
             else:
                 print(f"  Collection '{config.VECTORDB_COLLECTION}' not found — "
                       "run embed_and_load() first.")
@@ -179,9 +197,10 @@ def validate(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="RxGuard pipeline")
     parser.add_argument("--validate", action="store_true", help="Only validate existing outputs")
+    parser.add_argument("--labels", action="store_true", help="Also run DailyMed label pipeline")
     args = parser.parse_args()
 
     if args.validate:
         validate()
     else:
-        run_pipeline()
+        run_pipeline(args)

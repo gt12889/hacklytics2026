@@ -133,15 +133,19 @@ Keep it professional and clinical."""
                            drugs: List[str],
                            query_context: Dict,
                            ranked_results: List[Tuple[FAERSCase, Dict]],
-                           use_llm: bool = True) -> Dict:
-        """Generate complete formatted response"""
+                           use_llm: bool = True,
+                           label_hits: List[Dict] = None) -> Dict:
+        """Generate complete formatted response.
+        label_hits: Optional list from DailyMed/drug label search for fusion."""
+        label_hits = label_hits or []
         if not ranked_results:
             return {
                 'risk_score': 0.0,
                 'risk_level': 'UNKNOWN',
                 'summary': 'No similar cases found.',
                 'top_cases': [],
-                'recommendations': 'Proceed with caution and standard monitoring.'
+                'recommendations': 'Proceed with caution and standard monitoring.',
+                'label_hits': label_hits,
             }
         
         # Get top result for risk score
@@ -181,5 +185,6 @@ Keep it professional and clinical."""
             'recommendations': self.generate_recommendations(drugs, top_cases, query_context),
             'drugs': drugs,
             'query_context': query_context,
-            'total_matches': len(ranked_results)
+            'total_matches': len(ranked_results),
+            'label_hits': label_hits,
         }

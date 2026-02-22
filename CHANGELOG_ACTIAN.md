@@ -16,7 +16,7 @@
    - Port mapping (50051)
    - Persistent data storage
 
-3. **`ACTIAN_SETUP.md`** - Comprehensive setup guide
+3. **`DEPLOYMENT.md`** - Comprehensive setup guide
    - Installation instructions
    - Configuration options
    - Troubleshooting guide

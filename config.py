@@ -92,6 +92,7 @@ DATA_PROCESSED_DIR = os.path.join(os.path.dirname(__file__), "data", "processed"
 # ── Actian VectorAI DB ──────────────────────────────────────────────────
 VECTORDB_ADDRESS = os.getenv("VECTORDB_ADDRESS", "localhost:50051")
 VECTORDB_COLLECTION = "faers_reports"
+VECTORDB_LABELS_COLLECTION = "dailymed_labels"  # Separate namespace for drug labels
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 EMBEDDING_DIMENSION = 384
 VECTORDB_BATCH_SIZE = 500   # vectors per batch_upsert call

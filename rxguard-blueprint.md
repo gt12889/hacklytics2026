@@ -3,6 +3,23 @@
 
 ---
 
+### Implementation Status
+
+**Blueprint coverage (implemented):**
+- V1→V2→V3 comparison (Section 5) — placeholder metrics to be replaced with real numbers
+- Heatmap, demographic charts, severity distribution (Section 8, Analyses 1-5)
+- Retrieval quality validation with P@K, R@K, NDCG (Section 8, Analysis 4)
+- 20 test queries defined (Section 12)
+
+**Additions beyond the original blueprint:**
+- ROR disproportionality analysis
+- Real vocabulary mismatch quantification (1,532 vs. 1)
+- Live case retrieval with specific FAERS report IDs
+- Montelukast psychiatric signal validation against FDA black box warning
+- Indication field analysis for pre-existing condition detection
+
+---
+
 ## 1. ELEVATOR PITCH (30 seconds)
 
 "Every year, 250,000 Americans die from medical errors — making it the third leading cause of death. A huge chunk of those are preventable drug interactions. RxGuard is a semantic search engine for medication safety. Describe a patient's medication regimen in plain English, and our system retrieves dangerous interactions, contraindications, and real FDA adverse event reports — not through keyword matching, but through deep semantic understanding. We built it on Actian VectorAI DB for edge-deployable semantic retrieval, used Sphinx for statistical validation of our findings, and the entire system is an AI safety tool that protects humans from preventable harm."
