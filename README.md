@@ -1,190 +1,231 @@
-# Drug Interaction Risk Assessment System
+# RxGuard — Drug Interaction Safety Intelligence
 
-A comprehensive system for analyzing drug interaction risks using FAERS (FDA Adverse Event Reporting System) data and semantic search capabilities.
+A semantic search engine for medication safety that retrieves dangerous drug interactions from FDA adverse event reports using vector embeddings — catching what keyword-based interaction checkers miss.
 
-## 🎯 Features
+## Overview
 
-- **Natural Language Query Processing**: Extract drugs, patient demographics, and medical conditions from free-text queries
-- **Multiple Search Engines**: 
+RxGuard analyzes drug interaction risks using FAERS (FDA Adverse Event Reporting System) data and semantic search. Describe a patient's medication regimen in plain English, and the system retrieves dangerous interactions, contraindications, and real FDA adverse event cases — ranked by severity and matched by semantic meaning, not just keywords.
+
+## Features
+
+- **Natural Language Queries** — extract drugs, demographics, and conditions from free-text clinical descriptions
+- **Multi-Engine Search** — four search backends with progressively better semantic understanding:
   - V1: Keyword exact match (baseline)
-  - V2: TFIDF + Cosine Similarity
-  - V3: Vector Search with sentence transformers (in-memory)
-  - V3Actian: Vector Search with Actian VectorAI DB (production-scale, requires setup)
-- **Intelligent Risk Scoring**: 
-  - Semantic similarity matching
-  - Outcome severity weighting
-  - Demographic matching (age, sex, conditions)
-  - FAERS report count integration
-- **Clinical Recommendations**: Automated generation of safety recommendations
-- **LLM Integration**: Optional Gemini API for natural language summarization
+  - V2: TF-IDF + cosine similarity
+  - V3: Vector search with sentence-transformers (in-memory)
+  - V3Actian: Vector search with Actian VectorAI DB (production-scale)
+- **Risk Scoring** — weighted by semantic similarity, outcome severity, and demographic match (1-10 scale)
+- **Clinical Recommendations** — automated safety recommendations with alternative medication suggestions
+- **LLM Summaries** — optional Gemini API integration for natural language risk explanations
+- **React Dashboard** — interactive adverse event visualizations (Recharts), similar cases table, and AI analysis
+- **Data Pipeline** — batched FAERS ingestion with DailyMed drug label integration
 
-## 🏗️ Architecture
+## Architecture
 
 ```
+User Query (Natural Language)
+        │
+        ▼
 ┌─────────────────────────────────────────────────────────┐
-│ USER INTERFACE │
-│ Streamlit Web App — Natural Language Query Input │
+│                    QUERY PROCESSOR                       │
+│  1. Extract drug names (regex + drug dictionary)         │
+│  2. Extract patient context (age, sex, conditions)       │
+│  3. Generate query embedding (sentence-transformers)     │
 └──────────────────────┬──────────────────────────────────┘
- │
- ▼
+                       │
+          ┌────────────┼────────────┐
+          ▼            ▼            ▼
+   V1: Keyword   V2: TF-IDF   V3: Vector Search
+   (exact match) (cosine sim)  (Actian VectorAI DB)
+          │            │            │
+          └────────────┼────────────┘
+                       ▼
 ┌─────────────────────────────────────────────────────────┐
-│ QUERY PROCESSOR │
-│ 1. Extract drug names (NER / regex + drug dictionary) │
-│ 2. Extract patient context (age, sex, conditions) │
-│ 3. Generate query embedding (sentence-transformers) │
+│                   RESULTS RANKER                         │
+│  Semantic similarity + severity weighting +              │
+│  demographic match → Risk score (1-10)                   │
 └──────────────────────┬──────────────────────────────────┘
- │
- ┌────────────┼────────────┐
- ▼ ▼ ▼
-┌──────────────┐ ┌───────────┐ ┌──────────────────┐
-│ V1: KEYWORD │ │ V2: TFIDF │ │ V3: VECTOR SEARCH│
-│ Exact match │ │ + Cosine │ │ Embeddings │
-│ (Baseline) │ │ Similarity│ │ (Recommended) │
-└──────┬───────┘ └─────┬─────┘ └────────┬─────────┘
- │ │ │
- └───────────────┼────────────────┘
- │
- ▼
+                       ▼
 ┌─────────────────────────────────────────────────────────┐
-│ RESULTS RANKER │
-│ 1. Score by semantic similarity │
-│ 2. Weight by outcome severity (death > hospitalization) │
-│ 3. Weight by demographic match (age, sex similarity) │
-│ 4. Generate risk score (1-10) │
+│                RESPONSE GENERATOR                        │
+│  Risk score, matched cases, warnings, demographics,      │
+│  recommendations + optional Gemini LLM summarization     │
 └──────────────────────┬──────────────────────────────────┘
- │
- ▼
-┌─────────────────────────────────────────────────────────┐
-│ RESPONSE GENERATOR │
-│ Format results: risk score, matched cases, warnings, │
-│ demographic analysis, recommendations │
-│ (LLM summarization via Gemini API for natural language) │
-└─────────────────────────────────────────────────────────┘
+                       ▼
+         React Dashboard / Streamlit UI
 ```
 
-## 🚀 Installation
+## Quick Start
 
-1. **Clone the repository** (or navigate to project directory)
+### Prerequisites
 
-2. **Install dependencies**:
+- Python 3.12+
+- Node.js 18+ (for frontend)
+- Docker (optional, for Actian VectorAI DB)
+
+### 1. Install Python dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
-3. **Set up Gemini API key** (optional, for LLM features):
-   - Get an API key from [Google AI Studio](https://makersuite.google.com/app/apikey)
-   - Create a `.env` file in the project root:
-   ```
-   GEMINI_API_KEY=your_api_key_here
-   ```
+The first run downloads the sentence-transformer model (~90MB).
 
-4. **(Optional) Set up Actian VectorAI DB** for production-scale vector search:
-   - See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions
-   - Download the wheel file from [GitHub](https://github.com/hackmamba-io/actian-vectorAI-db-beta)
-   - Install: `pip install actiancortex-0.1.0b1-py3-none-any.whl`
-   - Start Docker: `docker compose up -d`
+### 2. Set up Gemini API (optional)
 
-5. **Run the application**:
+Create a `.env` file in the project root:
+
+```
+GEMINI_API_KEY=your_api_key_here
+```
+
+Get a free key at [Google AI Studio](https://aistudio.google.com/app/apikey).
+
+### 3. Run the application
+
+**Option A: Streamlit UI**
+
 ```bash
 streamlit run app.py
 ```
 
-## 📝 Usage
+Opens at `http://localhost:8501`.
 
-1. **Enter a natural language query** describing the patient and proposed drug combination
-   - Example: "65-year-old female on warfarin and metformin, doctor wants to add ibuprofen"
-
-2. **Select search engine version** (V3 recommended for best results)
-
-3. **Click "Analyze Risk"** to get:
-   - Risk score (1-10)
-   - Risk level (LOW/MODERATE/HIGH)
-   - Clinical summary
-   - Recommendations
-   - Similar cases from FAERS database
-
-## 📊 Example Output
-
-**Query**: "65-year-old female on warfarin and metformin, doctor wants to add ibuprofen"
-
-**Result**:
-- ⚠️ **RISK SCORE**: 8.7/10 — HIGH RISK
-- **Primary Interaction**: Warfarin + Ibuprofen (NSAID)
-  - Risk: Major GI bleeding, increased INR
-  - FAERS matches: 4,231 reports
-  - Outcome severity: 12% hospitalization, 3% fatal
-- **Recommendation**: Consider acetaminophen as alternative. If NSAID required, use lowest effective dose with PPI gastroprotection and increased INR monitoring.
-
-## 📦 Batched FAERS Pipeline
-
-To load more FAERS data in batches (pair batches + ramping report volume):
+**Option B: FastAPI + React Frontend**
 
 ```bash
-python run_pipeline_batched.py                     # 10 pairs/batch, stages 1K→2.5K→5K
-python run_pipeline_batched.py --pair-batch 5      # 5 pairs per batch
-python run_pipeline_batched.py --stages 1000 5000 10000   # custom volume stages
-python run_pipeline_batched.py --labels            # also run DailyMed label pipeline
+# Terminal 1 — backend
+python -m uvicorn api:app --reload
+
+# Terminal 2 — frontend
+cd frontend && npm install && npm run dev
 ```
 
-Each stage collects more reports per pair, then runs clean → build → embed on the full dataset. Safe to stop and resume; cached pairs are skipped when they already have enough reports.
+### 4. Set up Actian VectorAI DB (optional)
 
-## 🔧 Configuration
+For production-scale vector search:
 
-- **Search Engine**: Choose between V1 (keyword), V2 (TFIDF), or V3 (vector search)
-- **LLM Summarization**: Toggle Gemini API integration for natural language summaries
+```bash
+# Install the client
+pip install actiancortex-0.1.0b1-py3-none-any.whl
 
-## 📁 Project Structure
+# Start the database
+docker compose up -d
+```
+
+Download the wheel from [Actian VectorAI DB Beta](https://github.com/hackmamba-io/actian-vectorAI-db-beta). The app auto-detects the database and falls back to in-memory search if unavailable.
+
+## Usage
+
+Enter a natural language query describing the patient and proposed drug combination:
+
+```
+65-year-old female on warfarin and metformin, doctor wants to add ibuprofen
+```
+
+**Example output:**
+
+- **RISK SCORE**: 8.7/10 — HIGH RISK
+- **Primary Interaction**: Warfarin + Ibuprofen (NSAID) — major GI bleeding, increased INR
+- **FAERS matches**: 4,231 reports | 12% hospitalization, 3% fatal
+- **Recommendation**: Consider acetaminophen as alternative. If NSAID required, use lowest effective dose with PPI gastroprotection and increased INR monitoring.
+
+### More example queries
+
+```
+70-year-old male with diabetes on metformin, prescribed naproxen for arthritis
+55-year-old female on warfarin, needs aspirin for heart protection
+Patient on lithium and ACE inhibitor — risk assessment
+```
+
+## Data Pipeline
+
+Load FAERS data in batches with configurable pair counts and volume stages:
+
+```bash
+python run_pipeline_batched.py                          # defaults: 10 pairs/batch, 1K→2.5K→5K
+python run_pipeline_batched.py --pair-batch 5            # 5 pairs per batch
+python run_pipeline_batched.py --stages 1000 5000 10000  # custom volume stages
+python run_pipeline_batched.py --labels                  # include DailyMed label pipeline
+```
+
+Safe to stop and resume — cached pairs are skipped.
+
+## Project Structure
 
 ```
 hacklytics2026/
-├── app.py                   # Main Streamlit application
-├── config.py                # API settings, interaction pairs, pipeline constants
-├── query_processor.py       # Query processing and embedding
-├── search_engines.py        # V1 Keyword, V2 TFIDF, V3 Vector, V3Actian search
-├── results_ranker.py        # Risk scoring and ranking
-├── response_generator.py    # Response formatting and LLM integration
-├── data_models.py           # FAERS case data models
-├── sample_data.py           # Sample FAERS cases for testing
-├── actian_vector_db.py      # Actian VectorAI DB wrapper
-├── run_pipeline.py          # Full FAERS data pipeline runner
-├── run_pipeline_batched.py  # Batched pipeline (pair batches + volume stages)
-├── run_label_pipeline.py    # DailyMed drug label pipeline
-├── docker-compose.yml       # Docker config for Actian VectorAI DB
-├── requirements.txt         # Python dependencies
+├── app.py                     # Streamlit application
+├── api.py                     # FastAPI backend server
+├── config.py                  # API settings, 50 drug interaction pairs
+├── query_processor.py         # Query NLP and embedding generation
+├── search_engines.py          # V1/V2/V3/V3Actian search engines
+├── results_ranker.py          # Risk scoring and ranking
+├── response_generator.py      # Response formatting + Gemini integration
+├── actian_vector_db.py        # Actian VectorAI DB wrapper
+├── data_models.py             # FAERSCase dataclass
+├── sample_data.py             # Sample FAERS cases for testing
+├── run_pipeline.py            # Full FAERS data pipeline
+├── run_pipeline_batched.py    # Batched pipeline (pair batches + volume stages)
+├── run_label_pipeline.py      # DailyMed drug label pipeline
+├── eval_search.py             # Search evaluation and benchmarking
+├── docker-compose.yml         # Actian VectorAI DB container
+├── requirements.txt           # Python dependencies
 ├── src/
-│   ├── data_collector.py    # openFDA API data collection
-│   ├── data_cleaner.py      # FAERS data cleaning and normalization
-│   ├── document_builder.py  # Searchable document chunk builder
-│   ├── vector_store.py      # Embedding generation and vector storage
-│   ├── search.py            # Semantic search with filters
-│   ├── sphinx_eda.py        # EDA charts (heatmap, severity, demographics)
-│   ├── dailymed_ingestion.py    # DailyMed drug label ingestion
-│   ├── label_document_builder.py # Drug label document builder
-│   └── label_vector_store.py    # Drug label vector storage
+│   ├── data_collector.py      # openFDA API data collection
+│   ├── data_cleaner.py        # FAERS cleaning and normalization
+│   ├── document_builder.py    # Searchable document chunk builder
+│   ├── vector_store.py        # Embedding generation and storage
+│   ├── search.py              # Semantic search with filters
+│   ├── sphinx_eda.py          # EDA charts and statistical analysis
+│   ├── dailymed_ingestion.py  # DailyMed drug label ingestion
+│   ├── label_document_builder.py  # Drug label document builder
+│   └── label_vector_store.py  # Drug label vector storage
+├── frontend/                  # React 19 + Vite 7 dashboard
+│   ├── src/
+│   │   ├── App.jsx            # Router component
+│   │   ├── SearchPage.jsx     # Search input with type-ahead
+│   │   └── rxguard_dashboard.jsx  # Results dashboard with charts
+│   └── package.json
 └── data/
-    ├── raw/                 # Raw FAERS JSON from openFDA
-    └── processed/           # Cleaned parquet files
+    ├── raw/                   # Raw FAERS JSON from openFDA
+    └── processed/             # Cleaned parquet files
 ```
 
-## 🧪 Testing
+## Tech Stack
 
-The system includes sample FAERS cases for testing. You can:
-- View sample cases in the "View Sample FAERS Cases" expander
-- Test with the example query pre-filled in the text area
-- Try different patient scenarios and drug combinations
+| Layer | Technology |
+|-------|-----------|
+| Backend | Python 3.12, FastAPI, Streamlit |
+| Frontend | React 19, Vite 7, Recharts, React Router |
+| Embeddings | sentence-transformers (all-MiniLM-L6-v2, 384-dim) |
+| Vector DB | Actian VectorAI DB (HNSW, gRPC) |
+| LLM | Google Gemini API |
+| Data | openFDA API, DailyMed, pandas, PyArrow |
+| NLP | scikit-learn (TF-IDF), spaCy, regex |
+| Visualization | Recharts (frontend), Plotly (backend) |
+| DevOps | Docker, Docker Compose |
 
-## 🔮 Future Enhancements
+## Deployment
 
-- Integration with real FAERS database
-- Support for more drug names and conditions
-- Advanced demographic risk modeling
-- Export functionality for clinical reports
-- Filtered search with Actian VectorAI DB (by demographics, outcomes, etc.)
+### Local development
 
-## ⚠️ Disclaimer
+Run with Streamlit or FastAPI + React as described in Quick Start.
+
+### Production (Actian VectorAI DB on remote server)
+
+1. Provision a server (e.g., Vultr) with Docker installed
+2. Clone the repo and run `docker compose up -d` to start Actian VectorAI DB
+3. Open port 50051 for team access: `ufw allow 50051/tcp`
+4. Set `ACTIAN_DB_HOST=<server-ip>:50051` in each team member's `.env`
+5. Run the app with V3Actian search engine selected
+
+For monitoring: `docker logs vectoraidb` | `docker stats vectoraidb`
+
+## Disclaimer
 
 This system is for research and educational purposes. It should not be used as the sole basis for clinical decision-making. Always consult with qualified healthcare professionals for medical advice.
 
-## 📄 License
+## License
 
-This project is part of Hacklytics 2026.
+Hacklytics 2026.
