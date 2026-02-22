@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
-const ENGINE_COLORS = { V1: "#d32f2f", V2: "#f57f17", V3: "#2A7D6F", "V3+R": "#0D3D3A" };
+const ENGINE_COLORS = { V1: "#0D3D3A", V2: "#1A5C53", V3: "#2A7D6F", "V3+R": "#8ECFC0" };
 
 const PRESET_QUERIES = [
   { label: "72F Warfarin + Ibuprofen", query: "72-year-old female on Warfarin, adding Ibuprofen" },
@@ -12,9 +12,9 @@ const PRESET_QUERIES = [
 
 function OutcomeBadge({ type }) {
   const map = {
-    death: { label: "Fatal", bg: "#fdecea", color: "#d32f2f" },
-    hospitalized: { label: "Hospitalized", bg: "#e3f2fd", color: "#1565c0" },
-    lifethreat: { label: "Life-Threatening", bg: "#fff8e1", color: "#f57f17" },
+    death: { label: "Fatal", bg: "#e0ecea", color: "#0D3D3A" },
+    hospitalized: { label: "Hospitalized", bg: "#e3f2ed", color: "#1A5C53" },
+    lifethreat: { label: "Life-Threatening", bg: "#e8f0ee", color: "#2A7D6F" },
   };
   const s = map[type] || { label: type, bg: "#f5f5f5", color: "#666" };
   return (
@@ -177,19 +177,33 @@ export default function AnalysisPage() {
         {/* Brand + Navigation */}
         <div style={{ marginBottom: 32, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span onClick={() => navigate("/home")} style={{ fontSize: 48, fontWeight: 700, color: "#0D3D3A", fontFamily: "Space Mono, monospace", letterSpacing: 4, textTransform: "uppercase", cursor: "pointer", transition: "opacity 0.2s" }} onMouseOver={e => e.currentTarget.style.opacity = "0.8"} onMouseOut={e => e.currentTarget.style.opacity = "1"}>RxGuard</span>
-          <button
-            onClick={() => navigate("/home")}
-            style={{
-              background: "linear-gradient(135deg, #2A7D6F, #0D3D3A)",
-              color: "white", border: "none", borderRadius: 10,
-              padding: "12px 24px", fontSize: 14, fontWeight: 600,
-              cursor: "pointer", fontFamily: "DM Sans, sans-serif",
-              boxShadow: "0 4px 14px rgba(42,125,111,0.4)",
-              transition: "all 0.2s",
-            }}
-            onMouseOver={e => e.currentTarget.style.transform = "translateY(-1px)"}
-            onMouseOut={e => e.currentTarget.style.transform = "translateY(0)"}
-          >Back to Search</button>
+          <div style={{ display: "flex", gap: 12 }}>
+            <button
+              onClick={() => navigate("/case-studies")}
+              style={{
+                background: "transparent",
+                color: "#0D3D3A", border: "2px solid #c4d9d6", borderRadius: 10,
+                padding: "12px 24px", fontSize: 14, fontWeight: 600,
+                cursor: "pointer", fontFamily: "DM Sans, sans-serif",
+                transition: "all 0.2s",
+              }}
+              onMouseOver={e => { e.currentTarget.style.borderColor = "#2A7D6F"; e.currentTarget.style.transform = "translateY(-1px)"; }}
+              onMouseOut={e => { e.currentTarget.style.borderColor = "#c4d9d6"; e.currentTarget.style.transform = "translateY(0)"; }}
+            >Case Studies</button>
+            <button
+              onClick={() => navigate("/home")}
+              style={{
+                background: "linear-gradient(135deg, #2A7D6F, #0D3D3A)",
+                color: "white", border: "none", borderRadius: 10,
+                padding: "12px 24px", fontSize: 14, fontWeight: 600,
+                cursor: "pointer", fontFamily: "DM Sans, sans-serif",
+                boxShadow: "0 4px 14px rgba(42,125,111,0.4)",
+                transition: "all 0.2s",
+              }}
+              onMouseOver={e => e.currentTarget.style.transform = "translateY(-1px)"}
+              onMouseOut={e => e.currentTarget.style.transform = "translateY(0)"}
+            >Back to Search</button>
+          </div>
         </div>
 
         {/* Header */}
@@ -443,12 +457,12 @@ export default function AnalysisPage() {
           {/* Error display */}
           {compareError && (
             <div style={{
-              background: "#fdecea",
-              border: "1px solid #f5c6cb",
+              background: "#e0ecea",
+              border: "1px solid #a8c9c4",
               borderRadius: 10,
               padding: "12px 16px",
               fontSize: 13,
-              color: "#d32f2f",
+              color: "#0D3D3A",
               marginBottom: 20,
             }}>
               {compareError}
@@ -533,12 +547,12 @@ export default function AnalysisPage() {
                   </div>
                 ) : (
                   <div style={{
-                    background: "#fff8e1",
-                    border: "1px solid #ffe082",
+                    background: "#e8f0ee",
+                    border: "1px solid #b0d4cc",
                     borderRadius: 10,
                     padding: "12px 16px",
                     fontSize: 13,
-                    color: "#8d6e00",
+                    color: "#1A5C53",
                     marginBottom: 28,
                   }}>
                     No ground-truth data for this drug pair &mdash; metrics unavailable. Results are still shown below.

@@ -32,8 +32,8 @@ const PIPELINE_NODES = [
 
 // ── Engine Data ──────────────────────────────────────────────────────────────
 const ENGINES = [
-  { name: "V1", subtitle: "Keyword Match", desc: "Exact drug name lookup", color: "#d32f2f", ndcg: 0.52 },
-  { name: "V2", subtitle: "TF-IDF", desc: "Term frequency + cosine similarity", color: "#f57f17", ndcg: 0.64 },
+  { name: "V1", subtitle: "Keyword Match", desc: "Exact drug name lookup", color: "#0D3D3A", ndcg: 0.52 },
+  { name: "V2", subtitle: "TF-IDF", desc: "Term frequency + cosine similarity", color: "#1A5C53", ndcg: 0.64 },
   { name: "V3", subtitle: "Vector Search", desc: "Semantic embedding similarity", color: "#2A7D6F", ndcg: 0.82 },
 ];
 
@@ -266,6 +266,14 @@ export default function LandingPage() {
           >
             Learn More
           </button>
+          <button
+            onClick={() => navigate("/case-studies")}
+            style={ctaSecondaryStyle}
+            onMouseOver={e => { e.currentTarget.style.borderColor = "#c4d9d6"; e.currentTarget.style.color = "white"; }}
+            onMouseOut={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)"; e.currentTarget.style.color = "rgba(255,255,255,0.8)"; }}
+          >
+            Case Studies
+          </button>
         </div>
 
         {/* Scroll indicator */}
@@ -353,10 +361,10 @@ export default function LandingPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {/* Keyword Search card */}
               <div style={{
-                background: "#fdecea",
+                background: "#e0ecea",
                 borderRadius: 16,
                 padding: 28,
-                border: "1px solid #f5c6cb",
+                border: "1px solid #a8c9c4",
                 display: "flex",
                 flexDirection: "column",
                 gap: 16,
@@ -370,7 +378,7 @@ export default function LandingPage() {
                     width: 8,
                     height: 8,
                     borderRadius: "50%",
-                    background: "#d32f2f",
+                    background: "#0D3D3A",
                   }} />
                   <div style={{
                     fontFamily: "Space Mono, monospace",
@@ -397,7 +405,7 @@ export default function LandingPage() {
                 <div style={{
                   fontSize: 14,
                   fontWeight: 600,
-                  color: "#d32f2f",
+                  color: "#0D3D3A",
                   fontFamily: "DM Sans, sans-serif",
                 }}>
                   0 results found
@@ -406,7 +414,7 @@ export default function LandingPage() {
 
               {/* RxGuard card */}
               <div style={{
-                background: "#e8f5e9",
+                background: "#e0f0ed",
                 borderRadius: 16,
                 padding: 28,
                 border: "1px solid #c4d9d6",
@@ -450,7 +458,7 @@ export default function LandingPage() {
                 <div style={{
                   fontSize: 14,
                   fontWeight: 600,
-                  color: "#2e7d32",
+                  color: "#2A7D6F",
                   fontFamily: "DM Sans, sans-serif",
                   lineHeight: 1.6,
                 }}>
@@ -682,8 +690,8 @@ export default function LandingPage() {
                   iconSize={8}
                   formatter={(v) => <span style={{ fontSize: 11, color: "#555" }}>{v}</span>}
                 />
-                <Bar dataKey="V1" fill="#d32f2f" name="V1 Keyword" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="V2" fill="#f57f17" name="V2 TF-IDF" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="V1" fill="#0D3D3A" name="V1 Keyword" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="V2" fill="#1A5C53" name="V2 TF-IDF" radius={[6, 6, 0, 0]} />
                 <Bar dataKey="V3" fill="#2A7D6F" name="V3 Vector" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
