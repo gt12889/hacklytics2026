@@ -4,6 +4,7 @@ RxGuard — end-to-end pipeline runner (Phase 1 + Phase 2).
 
 Usage:
     python run_pipeline.py              # run full pipeline
+    python run_pipeline.py --labels     # also run DailyMed label pipeline
     python run_pipeline.py --validate   # only validate existing outputs
 """
 

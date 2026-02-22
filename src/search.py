@@ -94,6 +94,81 @@ def search_faers(
     return output
 
 
+def search_labels(
+    query: str,
+    top_k: int = 5,
+    drug_filter: str | None = None,
+) -> list[dict]:
+    """
+    Semantic search over drug label chunks in the labels collection.
+
+    Args:
+        query: Natural-language search query.
+        top_k: Number of results to return.
+        drug_filter: Optional drug name to filter results.
+
+    Returns:
+        List of dicts with: rank, score, doc_id, text, drugs, section, generic_name.
+    """
+    model = _get_model()
+    query_vector = model.encode(query).tolist()
+
+    fetch_k = top_k * 3 if drug_filter else top_k
+
+    try:
+        with CortexClient(config.VECTORDB_ADDRESS) as client:
+            if not client.has_collection(config.VECTORDB_LABELS_COLLECTION):
+                return []
+
+            results = client.search(
+                config.VECTORDB_LABELS_COLLECTION,
+                query=query_vector,
+                top_k=fetch_k,
+                with_payload=True,
+            )
+    except Exception:
+        return []
+
+    output = []
+    for r in results:
+        payload = r.payload or {}
+        if drug_filter:
+            drugs = payload.get("drugs", [])
+            if not any(drug_filter.lower() in str(d).lower() for d in drugs):
+                continue
+        output.append({
+            "rank": len(output) + 1,
+            "score": round(r.score, 4),
+            "doc_id": payload.get("doc_id", ""),
+            "text": payload.get("text", ""),
+            "drugs": payload.get("drugs", []),
+            "section": payload.get("section", ""),
+            "generic_name": payload.get("generic_name", ""),
+        })
+        if len(output) >= top_k:
+            break
+
+    return output
+
+
+def search_fused(
+    query: str,
+    faers_top_k: int = 10,
+    labels_top_k: int = 5,
+    min_severity: int = 0,
+) -> dict:
+    """
+    Fused search: FAERS cases + drug label hits.
+    Returns both result sets for display side-by-side.
+    """
+    faers = search_faers(query, top_k=faers_top_k, min_severity=min_severity)
+    labels = search_labels(query, top_k=labels_top_k)
+    return {
+        "faers": faers,
+        "labels": labels,
+    }
+
+
 def print_results(results: list[dict]):
     """Pretty-print search results."""
     if not results:

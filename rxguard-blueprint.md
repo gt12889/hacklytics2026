@@ -3,6 +3,25 @@
 
 ---
 
+7pm 2/21: V1→V2→V3 comparison (Section 5) — ✅ but with placeholder metrics ("~45%, ~63%, ~87% — target estimates")
+Heatmap, demographic charts, temporal trends (Section 8, Analyses 1-5) — ✅ listed under Sphinx but zero implementation specified
+Retrieval quality validation with P@K, R@K, NDCG (Section 8, Analysis 4) — ✅ mentioned, no real numbers
+Outcome severity distribution (Section 8, Analysis 5) — ✅ mentioned
+Test queries (Section 12) — ✅ 20 queries defined
+ROR disproportionality analysis — nowhere in the blueprint, this is a major addition we discovered
+Real vocabulary mismatch quantification (1,532 vs. 1) — blueprint theorized it, we proved it
+Live case retrieval with specific FAERS report IDs — blueprint assumed this but we executed it
+Montelukast psychiatric signal validation against FDA black box warning — not in blueprint
+Indication field analysis for pre-existing condition detection — not in blueprint
+
+WHAT WE BUILT IN OUR SESSIONS THAT'S NOT IN THE BLUEPRINT:
+
+ROR disproportionality analysis — nowhere in the blueprint, this is a major addition we discovered
+Real vocabulary mismatch quantification (1,532 vs. 1) — blueprint theorized it, we proved it
+Live case retrieval with specific FAERS report IDs — blueprint assumed this but we executed it
+Montelukast psychiatric signal validation against FDA black box warning — not in blueprint
+Indication field analysis for pre-existing condition detection — not in blueprint
+
 ## 1. ELEVATOR PITCH (30 seconds)
 
 "Every year, 250,000 Americans die from medical errors — making it the third leading cause of death. A huge chunk of those are preventable drug interactions. RxGuard is a semantic search engine for medication safety. Describe a patient's medication regimen in plain English, and our system retrieves dangerous interactions, contraindications, and real FDA adverse event reports — not through keyword matching, but through deep semantic understanding. We built it on Actian VectorAI DB for edge-deployable semantic retrieval, used Sphinx for statistical validation of our findings, and the entire system is an AI safety tool that protects humans from preventable harm."

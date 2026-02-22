@@ -105,6 +105,11 @@ def main():
                 """)
         
         use_llm = st.checkbox("Use LLM Summarization (Gemini)", value=True)
+        use_label_fusion = st.checkbox(
+            "Include Drug Label Warnings (DailyMed)",
+            value=True,
+            help="Show FDA drug label warnings alongside FAERS cases"
+        )
         
         st.markdown("---")
         st.markdown("### 📊 System Architecture")
@@ -186,14 +191,27 @@ def main():
                 search_results,
                 processed['context']
             )
-            
+
+            # Optional: search drug labels (DailyMed) for fusion
+            label_hits = []
+            if use_label_fusion:
+                try:
+                    from src.search import search_labels
+                    label_hits = search_labels(
+                        processed.get('original_query', query),
+                        top_k=5
+                    )
+                except Exception:
+                    pass
+
             # Generate response
             response = st.session_state.response_generator.format_full_response(
                 query,
                 processed['drugs'],
                 processed['context'],
                 ranked_results,
-                use_llm=use_llm
+                use_llm=use_llm,
+                label_hits=label_hits
             )
         
         # Display results
@@ -270,6 +288,19 @@ def display_results(response: dict, processed: dict):
     st.markdown("#### 💡 Recommendations")
     st.warning(response['recommendations'])
     
+    # Drug Label Warnings (optional fusion)
+    if response.get('label_hits'):
+        st.markdown("---")
+        st.markdown("#### 📋 Drug Label Warnings (DailyMed)")
+        for hit in response['label_hits'][:5]:
+            section = hit.get('section', 'Label')
+            drugs = hit.get('drugs', [])
+            text = hit.get('text', '')
+            score = hit.get('score', 0)
+            st.markdown(f"**{section}** — {', '.join(drugs[:3])} (similarity: {score:.2f})")
+            st.caption(text[:500] + ("..." if len(text) > 500 else ""))
+            st.markdown("")
+
     # Top Similar Cases
     st.markdown("---")
     st.markdown("#### 🏥 Similar Cases Retrieved")
