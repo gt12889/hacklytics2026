@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -7,6 +7,7 @@ import "swiper/css";
 import "swiper/css/pagination";
 import "swiper/css/effect-coverflow";
 import "swiper/css/navigation";
+import FluidGlass from "./FluidGlass";
 
 // ── Scroll Reveal Hook ───────────────────────────────────────────────────────
 function useScrollReveal() {
@@ -38,16 +39,15 @@ const PIPELINE_NODES = [
 
 // ── Engine Data ──────────────────────────────────────────────────────────────
 const ENGINES = [
-  { name: "V1", subtitle: "Keyword Match", desc: "Exact drug name lookup", color: "#0D3D3A", mrr: 0.72 },
-  { name: "V2", subtitle: "TF-IDF", desc: "Term frequency + cosine similarity", color: "#1A5C53", mrr: 0.81 },
-  { name: "V3", subtitle: "Vector Search", desc: "Semantic embedding similarity", color: "#2A7D6F", mrr: 0.94 },
+  { name: "V1", subtitle: "Keyword Match", desc: "Exact drug name lookup", color: "#0D3D3A" },
+  { name: "V2", subtitle: "TF-IDF", desc: "Term frequency + cosine similarity", color: "#1A5C53" },
+  { name: "V3", subtitle: "Vector Search", desc: "Semantic embedding similarity", color: "#2A7D6F" },
 ];
 
 // ── Chart Data ───────────────────────────────────────────────────────────────
 const METRIC_DATA = [
   { metric: "P@5", V1: 0.60, V2: 0.72, V3: 0.88 },
   { metric: "R@10", V1: 0.40, V2: 0.55, V3: 0.75 },
-  { metric: "MRR", V1: 0.72, V2: 0.81, V3: 0.94 },
 ];
 
 // ── Case Study Previews ──────────────────────────────────────────────────────
@@ -404,112 +404,100 @@ export default function LandingPage() {
               </p>
             </div>
 
-            {/* Right: comparison cards */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {/* Keyword Search card */}
-              <div style={{
-                background: "#f5e0e0",
-                borderRadius: 16,
-                padding: 28,
-                border: "1px solid #d4a8a8",
-                display: "flex",
-                flexDirection: "column",
-                gap: 16,
-              }}>
-                <div style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                }}>
-                  <div style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    background: "#C0392B",
-                  }} />
-                  <div style={{
-                    fontFamily: "Space Mono, monospace",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: "#C0392B",
-                    letterSpacing: 1,
-                    textTransform: "uppercase",
-                  }}>
-                    Keyword Search
-                  </div>
-                </div>
-                <div style={{
-                  background: "white",
-                  borderRadius: 10,
-                  padding: "14px 16px",
-                  fontSize: 13,
-                  color: "#555",
-                  lineHeight: 1.6,
-                  fontFamily: "Space Mono, monospace",
-                }}>
-                  "72yo on blood thinners + pain med"
-                </div>
-                <div style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: "#C0392B",
-                  fontFamily: "DM Sans, sans-serif",
-                }}>
-                  0 results found
-                </div>
+            {/* Right: FluidGlass lens + comparison cards */}
+            <div style={{ position: "relative" }}>
+              <div style={{ height: 600, borderRadius: 20, overflow: "hidden" }}>
+                <Suspense fallback={<div style={{ height: 600, background: "#e0ebe8", borderRadius: 20 }} />}>
+                  <FluidGlass
+                    mode="lens"
+                    bgColor="#E8EBE4"
+                    lensProps={{
+                      scale: 0.25,
+                      ior: 1.15,
+                      thickness: 5,
+                      chromaticAberration: 0.1,
+                      anisotropy: 0.01,
+                    }}
+                  />
+                </Suspense>
               </div>
 
-              {/* RxGuard card */}
+              {/* Floating comparison cards on top of glass */}
               <div style={{
-                background: "#e0f0ed",
-                borderRadius: 16,
-                padding: 28,
-                border: "1px solid #c4d9d6",
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
                 display: "flex",
                 flexDirection: "column",
                 gap: 16,
+                width: "80%",
+                pointerEvents: "none",
               }}>
+                {/* Keyword Search card */}
                 <div style={{
+                  background: "rgba(245, 224, 224, 0.92)",
+                  backdropFilter: "blur(8px)",
+                  borderRadius: 16,
+                  padding: 24,
+                  border: "1px solid #d4a8a8",
                   display: "flex",
-                  alignItems: "center",
-                  gap: 10,
+                  flexDirection: "column",
+                  gap: 12,
                 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#C0392B" }} />
+                    <div style={{
+                      fontFamily: "Space Mono, monospace", fontSize: 12,
+                      fontWeight: 700, color: "#C0392B",
+                      letterSpacing: 1, textTransform: "uppercase",
+                    }}>
+                      Keyword Search
+                    </div>
+                  </div>
                   <div style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    background: "#2A7D6F",
-                  }} />
-                  <div style={{
-                    fontFamily: "Space Mono, monospace",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    color: "#0D3D3A",
-                    letterSpacing: 1,
-                    textTransform: "uppercase",
+                    background: "rgba(255,255,255,0.8)", borderRadius: 10,
+                    padding: "12px 14px", fontSize: 13, color: "#555",
+                    lineHeight: 1.6, fontFamily: "Space Mono, monospace",
                   }}>
-                    RxGuard Semantic
+                    "72yo on blood thinners + pain med"
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "#C0392B", fontFamily: "DM Sans, sans-serif" }}>
+                    0 results found
                   </div>
                 </div>
+
+                {/* RxGuard card */}
                 <div style={{
-                  background: "white",
-                  borderRadius: 10,
-                  padding: "14px 16px",
-                  fontSize: 13,
-                  color: "#555",
-                  lineHeight: 1.6,
-                  fontFamily: "Space Mono, monospace",
+                  background: "rgba(224, 240, 237, 0.92)",
+                  backdropFilter: "blur(8px)",
+                  borderRadius: 16,
+                  padding: 24,
+                  border: "1px solid #c4d9d6",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 12,
                 }}>
-                  "72yo on blood thinners + pain med"
-                </div>
-                <div style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: "#2A7D6F",
-                  fontFamily: "DM Sans, sans-serif",
-                  lineHeight: 1.6,
-                }}>
-                  Found: Warfarin + Ibuprofen — 1,532 FAERS cases, 47 deaths
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#2A7D6F" }} />
+                    <div style={{
+                      fontFamily: "Space Mono, monospace", fontSize: 12,
+                      fontWeight: 700, color: "#0D3D3A",
+                      letterSpacing: 1, textTransform: "uppercase",
+                    }}>
+                      RxGuard Semantic
+                    </div>
+                  </div>
+                  <div style={{
+                    background: "rgba(255,255,255,0.8)", borderRadius: 10,
+                    padding: "12px 14px", fontSize: 13, color: "#555",
+                    lineHeight: 1.6, fontFamily: "Space Mono, monospace",
+                  }}>
+                    "72yo on blood thinners + pain med"
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "#2A7D6F", fontFamily: "DM Sans, sans-serif", lineHeight: 1.6 }}>
+                    Found: Warfarin + Ibuprofen — 1,532 FAERS cases, 47 deaths
+                  </div>
                 </div>
               </div>
             </div>
@@ -689,25 +677,6 @@ export default function LandingPage() {
                     lineHeight: 1.5,
                   }}>
                     {eng.desc}
-                  </div>
-                  <div style={{
-                    fontSize: 10,
-                    color: "#aaa",
-                    fontWeight: 500,
-                    marginBottom: 6,
-                    textTransform: "uppercase",
-                    letterSpacing: 2,
-                    fontFamily: "Space Mono, monospace",
-                  }}>
-                    MRR
-                  </div>
-                  <div style={{
-                    fontSize: 40,
-                    fontWeight: 700,
-                    fontFamily: "Space Mono, monospace",
-                    color: eng.color,
-                  }}>
-                    {(eng.mrr * 100).toFixed(0)}%
                   </div>
                 </div>
               </SwiperSlide>
