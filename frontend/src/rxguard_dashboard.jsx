@@ -326,10 +326,11 @@ export default function RxGuardDashboard() {
 
         {/* Stat Cards */}
         <div style={{ display: "flex", gap: 24, marginBottom: 28, flexWrap: "wrap" }}>
-          <StatCard label="Total Reports" value={d.totalReports} sub="Serious events only" color="#2A7D6F" icon="📊" delay={0.1} />
+          <StatCard label="Total Reports" value={d.totalReports} sub="FDA adverse event reports" color="#2A7D6F" icon="📊" delay={0.1} />
           <StatCard label="Deaths" value={d.outcomes.deaths} sub={d.totalReports ? `${((d.outcomes.deaths/d.totalReports)*100).toFixed(1)}% of reports` : "No data"} color="#2A7D6F" icon="💀" delay={0.2} />
           <StatCard label="Hospitalized" value={d.outcomes.hospitalized} sub={d.totalReports ? `${((d.outcomes.hospitalized/d.totalReports)*100).toFixed(1)}% of reports` : "No data"} color="#2A7D6F" icon="🏥" delay={0.3} />
           <StatCard label="Life-Threatening" value={d.outcomes.lifeThreatening} sub={d.totalReports ? `${((d.outcomes.lifeThreatening/d.totalReports)*100).toFixed(1)}% of reports` : "No data"} color="#2A7D6F" icon="⚡" delay={0.4} />
+          <StatCard label="Other / Non-Serious" value={d.totalReports ? Math.max(0, d.totalReports - d.outcomes.deaths - d.outcomes.hospitalized - d.outcomes.lifeThreatening) : 0} sub={d.totalReports ? `${(Math.max(0, (1 - (d.outcomes.deaths + d.outcomes.hospitalized + d.outcomes.lifeThreatening) / d.totalReports)) * 100).toFixed(1)}% of reports` : "No data"} color="#2A7D6F" icon="📋" delay={0.5} />
         </div>
 
         {/* Charts Row — only show when we have report data */}

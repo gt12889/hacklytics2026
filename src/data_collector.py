@@ -2,9 +2,8 @@
 RxGuard — openFDA FAERS data collection.
 
 Pulls adverse event reports from the openFDA drug/event endpoint for each
-interaction pair, filters for serious events, handles pagination and
-rate-limiting, slims records to essential fields, and saves raw JSON to
-data/raw/.
+interaction pair, handles pagination and rate-limiting, slims records to
+essential fields, and saves raw JSON to data/raw/.
 """
 
 import json
@@ -21,10 +20,9 @@ import config
 
 
 def _build_search(drug_a: str, drug_b: str) -> str:
-    """Build an openFDA search string for a drug pair (serious events only)."""
+    """Build an openFDA search string for a drug pair (all events)."""
     return (f'patient.drug.openfda.generic_name:"{drug_a}" '
-            f'AND patient.drug.openfda.generic_name:"{drug_b}" '
-            f'AND serious:1')
+            f'AND patient.drug.openfda.generic_name:"{drug_b}"')
 
 
 def _slim_record(record: dict) -> dict:
@@ -82,7 +80,7 @@ def _request_with_backoff(url: str, params: dict, max_retries: int = 5) -> reque
 
 
 def fetch_pair_reports(drug_a: str, drug_b: str, max_reports: int = config.REPORTS_PER_PAIR) -> list[dict]:
-    """Fetch up to *max_reports* serious FAERS reports mentioning both drugs."""
+    """Fetch up to *max_reports* FAERS reports mentioning both drugs."""
     results: list[dict] = []
     skip = 0
     search = _build_search(drug_a, drug_b)
@@ -128,16 +126,33 @@ def save_raw(drug_a: str, drug_b: str, records: list[dict]) -> str:
     return path
 
 
-def collect_all(pairs: list[tuple[str, str]] | None = None) -> dict[str, int]:
+def collect_all(pairs: list[tuple[str, str]] | None = None,
+                max_pairs: int | None = None) -> dict[str, int]:
     """
-    Pull FAERS data for every interaction pair and save to data/raw/.
+    Pull FAERS data for interaction pairs and save to data/raw/.
+
+    - Priority pairs (PRIORITY_PAIRS) are always fetched first.
+    - Already-cached pairs are skipped (append-only).
+    - max_pairs limits how many NEW pairs are fetched per run.
 
     Returns a dict mapping "drug_a+drug_b" → number of reports saved.
     """
     if pairs is None:
-        pairs = config.INTERACTION_PAIRS
+        # Deduplicate: priority pairs first, then the rest in order
+        seen = set()
+        ordered = []
+        for pair in config.PRIORITY_PAIRS + config.INTERACTION_PAIRS:
+            key = frozenset(pair)
+            if key not in seen:
+                seen.add(key)
+                ordered.append(pair)
+        pairs = ordered
+
+    if max_pairs is None:
+        max_pairs = config.PAIRS_PER_RUN
 
     summary: dict[str, int] = {}
+    fetched_count = 0  # how many NEW pairs we've actually fetched this run
 
     for drug_a, drug_b in tqdm(pairs, desc="Collecting FAERS data"):
         pair_key = f"{drug_a}+{drug_b}"
@@ -155,6 +170,11 @@ def collect_all(pairs: list[tuple[str, str]] | None = None) -> dict[str, int]:
             tqdm.write(f"  {pair_key}: {len(existing)} reports (cached)")
             continue
 
+        # Stop if we've hit the per-run limit
+        if fetched_count >= max_pairs:
+            tqdm.write(f"  {pair_key}: skipped (run limit {max_pairs} reached)")
+            continue
+
         # Fetch full set, then merge with existing (dedup by safetyreportid)
         records = fetch_pair_reports(drug_a, drug_b)
         records = [_slim_record(r) for r in records]
@@ -170,11 +190,21 @@ def collect_all(pairs: list[tuple[str, str]] | None = None) -> dict[str, int]:
         if records:
             save_raw(drug_a, drug_b, records)
         summary[pair_key] = len(records)
+        fetched_count += 1
 
     total = sum(summary.values())
-    print(f"\nTotal reports collected: {total:,}")
+    cached = sum(1 for k, v in summary.items() if v > 0)
+    print(f"\nTotal reports: {total:,} across {cached} pairs ({fetched_count} new this run)")
     return summary
 
 
 if __name__ == "__main__":
-    collect_all()
+    import argparse
+    parser = argparse.ArgumentParser(description="Fetch FAERS data incrementally")
+    parser.add_argument("-n", "--max-pairs", type=int, default=None,
+                        help=f"Max new pairs to fetch this run (default: {config.PAIRS_PER_RUN})")
+    parser.add_argument("--all", action="store_true",
+                        help="Fetch ALL remaining pairs (ignore PAIRS_PER_RUN limit)")
+    args = parser.parse_args()
+    max_p = 9999 if args.all else args.max_pairs
+    collect_all(max_pairs=max_p)
