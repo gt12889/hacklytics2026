@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area, Sector } from "recharts";
 
 // ── Mock Data ─────────────────────────────────────────────────────────────────
 const MOCK_DATA = {
@@ -235,6 +235,7 @@ export default function RxGuardDashboard() {
   const navigate = useNavigate();
   const [expandedCase, setExpandedCase] = useState(null);
   const [hoveredBar, setHoveredBar] = useState(null);
+  const [hoveredSlice, setHoveredSlice] = useState(null);
   const d = location.state?.data || MOCK_DATA;
   const parsed = location.state?.parsed || null;
 
@@ -362,10 +363,49 @@ export default function RxGuardDashboard() {
             <SectionCard title="Sex Distribution" subtitle="Among matched cases">
               <ResponsiveContainer width="100%" height={240}>
                 <PieChart>
-                  <Pie data={d.sexSplit} cx="50%" cy="50%" innerRadius={60} outerRadius={90} dataKey="value" paddingAngle={3}>
-                    {d.sexSplit.map((_, i) => <Cell key={i} fill={SEX_COLORS[i]} />)}
+                  <Pie
+                    data={d.sexSplit}
+                    cx="50%" cy="50%"
+                    innerRadius={60} outerRadius={90}
+                    dataKey="value"
+                    paddingAngle={3}
+                    activeIndex={hoveredSlice}
+                    activeShape={(props) => {
+                      const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
+                      return (
+                        <Sector
+                          cx={cx} cy={cy}
+                          innerRadius={innerRadius - 4}
+                          outerRadius={outerRadius + 8}
+                          startAngle={startAngle}
+                          endAngle={endAngle}
+                          fill={fill}
+                        />
+                      );
+                    }}
+                    onMouseEnter={(_, i) => setHoveredSlice(i)}
+                    onMouseLeave={() => setHoveredSlice(null)}
+                  >
+                    {d.sexSplit.map((_, i) => (
+                      <Cell
+                        key={i}
+                        fill={SEX_COLORS[i]}
+                        opacity={hoveredSlice === null || hoveredSlice === i ? 1 : 0.4}
+                        style={{ cursor: "pointer", transition: "opacity 0.2s" }}
+                      />
+                    ))}
                   </Pie>
-                  <Legend iconType="circle" iconSize={10} formatter={(v) => <span style={{ fontSize: 12, color: "#555" }}>{v}</span>} />
+                  <Legend
+                    iconType="circle"
+                    iconSize={10}
+                    formatter={(v, entry, i) => (
+                      <span
+                        style={{ fontSize: 12, color: hoveredSlice === null || hoveredSlice === i ? "#333" : "#aaa", cursor: "pointer", transition: "color 0.2s" }}
+                        onMouseEnter={() => setHoveredSlice(i)}
+                        onMouseLeave={() => setHoveredSlice(null)}
+                      >{v}</span>
+                    )}
+                  />
                   <Tooltip formatter={(v) => [`${v}%`]} contentStyle={{ borderRadius: 8, border: "none", fontSize: 12 }} />
                 </PieChart>
               </ResponsiveContainer>
