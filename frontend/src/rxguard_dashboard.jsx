@@ -545,11 +545,17 @@ export default function RxGuardDashboard() {
             {/* A. Risk Assessment */}
             <div style={{ marginBottom: 20 }}>
               <ClinicalInsightItem
-                title={`Risk Level: ${d.riskLevel || "UNKNOWN"} (${d.riskScore ?? "—"}/10)`}
+                title={
+                  (d.riskScore ?? 0) >= 8 ? "Avoid — High Risk Interaction"
+                  : (d.riskScore ?? 0) >= 5 ? "Caution — Moderate Risk Interaction"
+                  : (d.riskScore ?? 0) >= 3 ? "Investigate — Low-Moderate Risk"
+                  : "Monitor — Lower Risk Interaction"
+                }
                 description={
-                  (d.riskScore ?? 0) >= 8 ? "This interaction carries significant clinical risk and warrants immediate attention."
-                  : (d.riskScore ?? 0) >= 5 ? "This interaction poses moderate risk; monitoring and possible dose adjustment recommended."
-                  : "This interaction carries relatively lower risk, but standard precautions apply."
+                  (d.riskScore ?? 0) >= 8 ? "This combination carries significant clinical risk. Strongly consider alternatives or implement close monitoring protocols."
+                  : (d.riskScore ?? 0) >= 5 ? "This interaction poses moderate risk. Dose adjustment, additional monitoring, or alternative agents may be warranted."
+                  : (d.riskScore ?? 0) >= 3 ? "Some interaction potential exists. Review patient-specific factors and monitor as clinically appropriate."
+                  : "Standard precautions apply. Routine monitoring is generally sufficient."
                 }
               />
 
