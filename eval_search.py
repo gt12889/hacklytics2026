@@ -23,6 +23,7 @@ import numpy as np
 from data_models import FAERSCase
 from query_processor import QueryProcessor
 from search_engines import V1KeywordSearch, V2TFIDFSearch, V3VectorSearch
+from results_ranker import ResultsRanker
 
 # ── Brand ↔ Generic mapping ────────────────────────────────────────────────
 BRAND_GENERIC_MAP: Dict[str, str] = {
@@ -482,6 +483,20 @@ def run_v3(
     return [case.case_id for case, _score in results]
 
 
+def run_v3_ranked(
+    query: TestQuery,
+    v3_engine: V3VectorSearch,
+    qp: QueryProcessor,
+    ranker: ResultsRanker,
+    top_k: int = 10,
+) -> List[str]:
+    """V3 vector search + ResultsRanker re-ranking (matches production)."""
+    processed = qp.process_query(query.query)
+    results = v3_engine.search(processed["embedding"], top_k=top_k)
+    ranked = ranker.rank_results(results, processed["context"])
+    return [case.case_id for case, _scores in ranked]
+
+
 # ── Full evaluation ─────────────────────────────────────────────────────────
 
 @dataclass
@@ -512,7 +527,10 @@ def run_full_evaluation(top_k: int = 10) -> List[QueryResult]:
     v3 = V3VectorSearch(qp)
     v3.fit(corpus)
 
-    print(f"Running {len(TEST_QUERIES)} queries × 3 engines...\n")
+    # Ranker for V3+R pipeline
+    ranker = ResultsRanker()
+
+    print(f"Running {len(TEST_QUERIES)} queries × 4 engines...\n")
 
     all_results: List[QueryResult] = []
 
@@ -543,6 +561,14 @@ def run_full_evaluation(top_k: int = 10) -> List[QueryResult]:
             v3_metrics, v3_ids, len(relevant_ids),
         ))
 
+        # V3+R (V3 + ResultsRanker re-ranking)
+        v3r_ids = run_v3_ranked(q, v3, qp, ranker, top_k)
+        v3r_metrics = compute_metrics(v3r_ids, relevant_ids)
+        all_results.append(QueryResult(
+            q.id, q.query, q.category, "V3+R",
+            v3r_metrics, v3r_ids, len(relevant_ids),
+        ))
+
     return all_results
 
 
@@ -554,7 +580,7 @@ def _fmt(val: float) -> str:
 
 def print_summary_table(results: List[QueryResult]) -> None:
     """Print mean metrics per engine."""
-    engines = ["V1", "V2", "V3"]
+    engines = ["V1", "V2", "V3", "V3+R"]
     metric_names = ["P@5", "P@10", "R@10", "MRR", "NDCG@10"]
 
     print("=" * 72)
@@ -576,7 +602,7 @@ def print_summary_table(results: List[QueryResult]) -> None:
 
 def print_category_breakdown(results: List[QueryResult]) -> None:
     """Print mean metrics per engine × category."""
-    engines = ["V1", "V2", "V3"]
+    engines = ["V1", "V2", "V3", "V3+R"]
     categories = ["high_severity", "brand_name", "natural_language", "demographic"]
     cat_labels = {
         "high_severity": "Generic (Q01-Q10)",
@@ -609,7 +635,7 @@ def print_category_breakdown(results: List[QueryResult]) -> None:
 
 def print_per_query_detail(results: List[QueryResult]) -> None:
     """Print per-query hit/miss detail."""
-    engines = ["V1", "V2", "V3"]
+    engines = ["V1", "V2", "V3", "V3+R"]
 
     print("=" * 80)
     print("PER-QUERY DETAIL — R@10 (hit = ≥1 relevant in top 10)")
@@ -657,9 +683,9 @@ def generate_plot(results: List[QueryResult], path: str = "/tmp/eval_comparison.
         print("plotly not installed — skipping chart. Install with: pip install plotly")
         return
 
-    engines = ["V1", "V2", "V3"]
+    engines = ["V1", "V2", "V3", "V3+R"]
     metric_names = ["P@5", "P@10", "R@10", "MRR", "NDCG@10"]
-    colors = {"V1": "#ef4444", "V2": "#f59e0b", "V3": "#22c55e"}
+    colors = {"V1": "#ef4444", "V2": "#f59e0b", "V3": "#22c55e", "V3+R": "#3b82f6"}
 
     fig = go.Figure()
     for eng in engines:
@@ -678,7 +704,7 @@ def generate_plot(results: List[QueryResult], path: str = "/tmp/eval_comparison.
         ))
 
     fig.update_layout(
-        title="Search Engine Comparison: V1 vs V2 vs V3",
+        title="Search Engine Comparison: V1 vs V2 vs V3 vs V3+R",
         xaxis_title="Metric",
         yaxis_title="Score",
         yaxis=dict(range=[0, 1.05]),

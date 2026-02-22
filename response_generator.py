@@ -52,7 +52,7 @@ class ResponseGenerator:
             return "No similar cases found. Proceed with caution and standard monitoring."
         
         # Analyze top cases
-        high_risk_count = sum(1 for _, scores in top_cases if scores['risk_score'] >= 7.0)
+        high_risk_count = sum(1 for _, scores in top_cases if scores['relevance_score'] >= 7.0)
         hospitalization_count = sum(1 for case, _ in top_cases if 'hospitalization' in case.outcome_severity.lower())
         death_count = sum(1 for case, _ in top_cases if 'death' in case.outcome_severity.lower())
         
@@ -150,7 +150,7 @@ Keep it professional and clinical."""
         
         # Get top result for risk score
         top_case, top_scores = ranked_results[0]
-        risk_score = top_scores['risk_score']
+        risk_score = top_scores['relevance_score']
         
         # Determine risk level
         if risk_score >= 8.0:

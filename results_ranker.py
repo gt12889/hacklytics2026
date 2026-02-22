@@ -1,7 +1,7 @@
 """
 Results Ranker Module
 Scores and ranks search results by semantic similarity, outcome severity,
-demographic match, and generates risk score
+demographic match, and generates relevance score
 """
 from typing import List, Tuple, Dict
 import numpy as np
@@ -64,14 +64,14 @@ class ResultsRanker:
         """Calculate outcome severity score"""
         return self.SEVERITY_WEIGHTS.get(case.outcome_severity.lower(), 1.0)
     
-    def calculate_risk_score(self, 
+    def calculate_relevance_score(self,
                            semantic_similarity: float,
                            demographic_match: float,
                            outcome_severity: float,
                            faers_matches: int) -> float:
         """
-        Calculate overall risk score (1-10)
-        
+        Calculate overall relevance score (1-10)
+
         Formula:
         - Base: semantic similarity (0-1) * 5
         - Weighted by: outcome severity (normalized)
@@ -80,21 +80,21 @@ class ResultsRanker:
         """
         # Base score from semantic similarity (0-5)
         base_score = semantic_similarity * 5.0
-        
+
         # Severity multiplier (0.5x to 2.0x)
         severity_multiplier = (outcome_severity / 10.0) * 2.0
-        
+
         # Demographic boost (0.8x to 1.2x)
         demo_multiplier = 0.8 + (demographic_match * 0.4)
-        
+
         # FAERS matches boost (log scale, max 1.5x)
         faers_boost = min(1.0 + (np.log10(max(faers_matches, 1)) / 10.0), 1.5)
-        
+
         # Calculate final score
-        risk_score = base_score * severity_multiplier * demo_multiplier * faers_boost
-        
+        relevance_score = base_score * severity_multiplier * demo_multiplier * faers_boost
+
         # Clamp to 1-10 range
-        return min(max(risk_score, 1.0), 10.0)
+        return min(max(relevance_score, 1.0), 10.0)
     
     def rank_results(self, 
                     search_results: List[Tuple[FAERSCase, float]],
@@ -109,24 +109,24 @@ class ResultsRanker:
             # Calculate all scores
             demo_score = self.calculate_demographic_similarity(case, query_context)
             severity_score = self.calculate_outcome_severity_score(case)
-            risk_score = self.calculate_risk_score(
+            relevance_score = self.calculate_relevance_score(
                 semantic_score,
                 demo_score,
                 severity_score,
                 case.faers_matches
             )
-            
+
             score_details = {
                 'semantic_similarity': semantic_score,
                 'demographic_match': demo_score,
                 'outcome_severity': severity_score,
-                'risk_score': risk_score,
+                'relevance_score': relevance_score,
                 'faers_matches': case.faers_matches
             }
-            
+
             ranked.append((case, score_details))
-        
-        # Sort by risk score descending
-        ranked.sort(key=lambda x: x[1]['risk_score'], reverse=True)
+
+        # Sort by relevance score descending
+        ranked.sort(key=lambda x: x[1]['relevance_score'], reverse=True)
         
         return ranked
