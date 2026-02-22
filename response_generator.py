@@ -19,7 +19,7 @@ class ResponseGenerator:
         api_key = api_key or os.getenv('GEMINI_API_KEY')
         if api_key:
             self.client = genai.Client(api_key=api_key)
-            self.model_name = 'gemini-2.0-flash'
+            self.model_name = 'gemini-2.5-flash-preview-05-20'
         else:
             self.client = None
             self.model_name = None

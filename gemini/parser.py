@@ -19,7 +19,7 @@ Text: \"{text}\" """
 for attempt in range(5):
     try:
         response = client.models.generate_content(
-            model="gemini-3-flash-preview",
+            model="gemini-2.5-flash-preview-05-20",
             contents=prompt,
         )
         output = response.text
@@ -74,7 +74,7 @@ Output:
 #     prescribed: str[] | None
 
 # response = client.models.generate_content(
-#             model="gemini-3-flash-preview",
+#             model="gemini-2.5-flash-preview-05-20",
 #             contents="Explain how AI works in a few words",
 #         )
 #         print(response.text)
