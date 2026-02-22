@@ -540,61 +540,32 @@ export default function RxGuardDashboard() {
                 </SectionCard>
               </div>
             )}
+
+            {/* Demographic Risk Profile */}
+            {d.demographicRisk && d.demographicRisk.length > 0 && (
+              <div style={{ marginBottom: 28 }}>
+                <SectionCard title="Demographic Risk Profile" subtitle="Mean severity by age group and sex for this drug pair">
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={d.demographicRisk} margin={{ left: 0, right: 20, top: 8, bottom: 8 }}>
+                      <XAxis dataKey="ageGroup" tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} label={{ value: "Mean Severity", angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#aaa" } }} />
+                      <Tooltip
+                        contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontSize: 12 }}
+                        formatter={(v, name, props) => {
+                          const countKey = name + "Count";
+                          const count = props.payload[countKey];
+                          return [`${v.toFixed(2)} (n=${count})`, name.charAt(0).toUpperCase() + name.slice(1)];
+                        }}
+                      />
+                      <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: "#555" }}>{v.charAt(0).toUpperCase() + v.slice(1)}</span>} />
+                      <Bar dataKey="male" fill="#2A7D6F" name="male" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="female" fill="#6BB5A8" name="female" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </SectionCard>
+              </div>
+            )}
           </>
-        )}
-
-        {/* ── Sphinx Stats & Retrieval Eval (below EDA) ─────────────────── */}
-
-        {/* Severity Distribution */}
-        {d.severityBreakdown && d.severityBreakdown.some(s => s.count > 0) && (
-          <div style={{ marginBottom: 28 }}>
-            <SectionCard title="Severity Distribution" subtitle="Risk profile for this drug pair">
-              <ResponsiveContainer width="100%" height={100}>
-                <BarChart
-                  data={[d.severityBreakdown.reduce((acc, s) => ({ ...acc, [s.severity]: s.count }), {})]}
-                  layout="vertical"
-                  margin={{ left: 0, right: 20, top: 8, bottom: 8 }}
-                >
-                  <XAxis type="number" tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} />
-                  <YAxis type="category" dataKey={() => ""} hide />
-                  <Tooltip
-                    contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontSize: 12 }}
-                    formatter={(v, name) => [`${v} reports`, name]}
-                  />
-                  <Bar dataKey="death" stackId="sev" fill="#0D3D3A" name="Death" radius={[4, 0, 0, 4]} />
-                  <Bar dataKey="life-threatening" stackId="sev" fill="#1A5C53" name="Life-Threatening" />
-                  <Bar dataKey="hospitalization" stackId="sev" fill="#2A7D6F" name="Hospitalization" />
-                  <Bar dataKey="other" stackId="sev" fill="#c4d9d6" name="Other" radius={[0, 4, 4, 0]} />
-                  <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: "#555" }}>{v}</span>} />
-                </BarChart>
-              </ResponsiveContainer>
-            </SectionCard>
-          </div>
-        )}
-
-        {/* Demographic Risk Profile */}
-        {d.demographicRisk && d.demographicRisk.length > 0 && (
-          <div style={{ marginBottom: 28 }}>
-            <SectionCard title="Demographic Risk Profile" subtitle="Mean severity by age group and sex for this drug pair">
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={d.demographicRisk} margin={{ left: 0, right: 20, top: 8, bottom: 8 }}>
-                  <XAxis dataKey="ageGroup" tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} label={{ value: "Mean Severity", angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#aaa" } }} />
-                  <Tooltip
-                    contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontSize: 12 }}
-                    formatter={(v, name, props) => {
-                      const countKey = name + "Count";
-                      const count = props.payload[countKey];
-                      return [`${v.toFixed(2)} (n=${count})`, name.charAt(0).toUpperCase() + name.slice(1)];
-                    }}
-                  />
-                  <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: "#555" }}>{v.charAt(0).toUpperCase() + v.slice(1)}</span>} />
-                  <Bar dataKey="male" fill="#2A7D6F" name="male" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="female" fill="#6BB5A8" name="female" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </SectionCard>
-          </div>
         )}
 
       </div>
