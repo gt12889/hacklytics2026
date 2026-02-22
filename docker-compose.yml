@@ -1,11 +1,43 @@
 services:
+  # Nginx reverse proxy — serves React build + proxies /api to backend
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    container_name: rxguard-nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    volumes:
+      - certbot-webroot:/var/www/certbot
+    restart: unless-stopped
+
+  # FastAPI backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rxguard-backend
+    expose:
+      - "8000"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
+  # Actian VectorAI DB (optional — backend falls back to in-memory search)
   vectoraidb:
     image: localhost/actian/vectoraidb:1.0b
     # platform: linux/amd64   # Uncomment on macOS
     container_name: vectoraidb
     ports:
-      - "0.0.0.0:50051:50051"  # Bind to all interfaces for team access
+      - "0.0.0.0:50051:50051"
     volumes:
       - ./data:/data
     restart: unless-stopped
     stop_grace_period: 2m
+
+volumes:
+  certbot-webroot:
