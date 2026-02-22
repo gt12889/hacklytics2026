@@ -289,6 +289,116 @@ def _aggregate_from_sample(
     }
 
 
+SEVERITY_LABELS = {4: "death", 3: "life-threatening", 2: "hospitalization", 0: "other"}
+SEVERITY_ORDER = ["death", "life-threatening", "hospitalization", "other"]
+DEMO_AGE_BINS = [0, 30, 50, 65, 80, 200]
+DEMO_AGE_LABELS = ["0-30", "31-50", "51-65", "66-80", "80+"]
+
+
+def _compute_severity_score(df: pd.DataFrame) -> pd.DataFrame:
+    """Add severity_score column (mirrors sphinx_eda.compute_severity)."""
+    df = df.copy()
+    df["severity_score"] = 0
+    df.loc[df["seriousnesshospitalization"].astype(str) == "1", "severity_score"] = 2
+    df.loc[df["seriousnesslifethreatening"].astype(str) == "1", "severity_score"] = 3
+    df.loc[df["seriousnessdeath"].astype(str) == "1", "severity_score"] = 4
+    return df
+
+
+def _filter_to_drug_pair(df: pd.DataFrame, drugs: list[str]) -> pd.DataFrame:
+    """Filter DataFrame to rows containing both drugs."""
+    drug_sets = df["drugs"].apply(
+        lambda lst: set(d.lower().strip() for d in lst)
+        if isinstance(lst, list) else set()
+    )
+    mask = drug_sets.apply(
+        lambda s: drugs[0].lower() in s and drugs[1].lower() in s
+    )
+    return df.loc[mask]
+
+
+def _sphinx_context(
+    df: Optional[pd.DataFrame], drugs: list[str], ranked_results: list
+) -> dict:
+    """Compute Sphinx EDA context data for the search response.
+
+    Returns a dict with optional keys: severityBreakdown, datasetStats,
+    demographicRisk.  Each is omitted when data is unavailable.
+    """
+    result = {}
+
+    # ── Severity Breakdown ────────────────────────────────────────────────
+    if df is not None and len(drugs) >= 2:
+        matched = _filter_to_drug_pair(df, drugs)
+        if not matched.empty:
+            matched = _compute_severity_score(matched)
+            sev_counts = matched["severity_score"].map(SEVERITY_LABELS).value_counts()
+            result["severityBreakdown"] = [
+                {"severity": label, "count": int(sev_counts.get(label, 0))}
+                for label in SEVERITY_ORDER
+            ]
+
+    # Fallback: derive from sample cases' outcome_severity
+    if "severityBreakdown" not in result and ranked_results:
+        outcome_to_sev = {
+            "death": "death",
+            "serious": "life-threatening",
+            "hospitalization": "hospitalization",
+            "non-serious": "other",
+        }
+        sev_counts = {}
+        for case, _ in ranked_results:
+            label = outcome_to_sev.get(case.outcome_severity, "other")
+            sev_counts[label] = sev_counts.get(label, 0) + case.faers_matches
+        result["severityBreakdown"] = [
+            {"severity": label, "count": sev_counts.get(label, 0)}
+            for label in SEVERITY_ORDER
+        ]
+
+    # ── Dataset Stats (parquet only) ──────────────────────────────────────
+    if df is not None:
+        all_drugs = df["drugs"].explode().dropna().str.lower().str.strip().unique()
+        all_rxns = df["reactions"].explode().dropna().str.lower().str.strip().unique()
+        result["datasetStats"] = {
+            "totalReports": int(len(df)),
+            "uniqueDrugs": int(len(all_drugs)),
+            "uniqueReactions": int(len(all_rxns)),
+        }
+
+    # ── Demographic Risk Profile (parquet only) ───────────────────────────
+    if df is not None and len(drugs) >= 2:
+        matched = _filter_to_drug_pair(df, drugs)
+        matched = matched.dropna(subset=["patient_age"]).copy()
+        matched = matched[matched["patient_sex"].isin(["male", "female"])]
+        if not matched.empty:
+            matched = _compute_severity_score(matched)
+            matched["age_group"] = pd.cut(
+                matched["patient_age"],
+                bins=DEMO_AGE_BINS, labels=DEMO_AGE_LABELS, right=True,
+            )
+            agg = matched.groupby(
+                ["age_group", "patient_sex"], observed=True
+            ).agg(
+                mean_severity=("severity_score", "mean"),
+                count=("severity_score", "size"),
+            ).reset_index()
+            demo_risk = []
+            for ag in DEMO_AGE_LABELS:
+                entry = {"ageGroup": ag}
+                for sex in ["male", "female"]:
+                    row = agg[(agg["age_group"] == ag) & (agg["patient_sex"] == sex)]
+                    if not row.empty:
+                        entry[sex] = round(float(row["mean_severity"].iloc[0]), 2)
+                        entry[f"{sex}Count"] = int(row["count"].iloc[0])
+                    else:
+                        entry[sex] = 0
+                        entry[f"{sex}Count"] = 0
+                demo_risk.append(entry)
+            result["demographicRisk"] = demo_risk
+
+    return result
+
+
 def _build_similar_cases(ranked_results: list, limit: int = 5) -> list[dict]:
     """Convert ranked FAERSCase results into the dashboard's similarCases shape."""
     similar = []
@@ -352,6 +462,9 @@ def search(req: SearchRequest):
         # 6. Build similar cases
         similar_cases = _build_similar_cases(ranked)
 
+        # 6b. Sphinx EDA context (severity, dataset stats, demographic risk)
+        sphinx = _sphinx_context(faers_df, drugs, ranked)
+
         # 7. Determine drug names for header (order by position in query)
         query_lower = req.query.lower()
         ordered_drugs = sorted(drugs, key=lambda d: query_lower.find(d.lower()))
@@ -372,6 +485,7 @@ def search(req: SearchRequest):
             "similarCases": similar_cases,
             "summary": resp.get("summary", ""),
             "recommendations": resp.get("recommendations", ""),
+            **sphinx,
         }
 
     except Exception as e:
