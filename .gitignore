@@ -54,3 +54,6 @@ data/processed/*.parquet
 # Log files
 logs/
 *.log
+
+# Context dump
+context-dump.md
