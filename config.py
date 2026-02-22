@@ -19,7 +19,7 @@ PAGE_LIMIT = 100          # max results per request (openFDA cap)
 MAX_SKIP = 26000          # openFDA caps skip at ~26000
 
 # Per-pair target: how many reports to try to pull per interaction pair
-REPORTS_PER_PAIR = 100
+REPORTS_PER_PAIR = 1000
 
 # ── Interaction pairs ────────────────────────────────────────────────────────
 # 50 high-risk drug interaction pairs chosen from blueprint test queries
