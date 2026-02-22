@@ -9,10 +9,19 @@ import numpy as np
 
 # Common drug names dictionary (can be expanded)
 DRUG_DICTIONARY = {
-    'warfarin', 'metformin', 'ibuprofen', 'aspirin', 'acetaminophen', 
+    # Original entries
+    'warfarin', 'metformin', 'ibuprofen', 'aspirin', 'acetaminophen',
     'naproxen', 'diclofenac', 'celecoxib', 'meloxicam', 'indomethacin',
     'insulin', 'metoprolol', 'lisinopril', 'amlodipine', 'atorvastatin',
-    'omeprazole', 'pantoprazole', 'lansoprazole', 'esomeprazole'
+    'omeprazole', 'pantoprazole', 'lansoprazole', 'esomeprazole',
+    # Added to cover all config.TARGET_DRUGS interaction pairs
+    'methotrexate', 'lithium', 'enalapril', 'fluoxetine', 'tramadol',
+    'sertraline', 'paroxetine', 'simvastatin', 'clarithromycin',
+    'erythromycin', 'digoxin', 'amiodarone', 'ciprofloxacin', 'prednisone',
+    'levofloxacin', 'dexamethasone', 'spironolactone', 'metronidazole',
+    'verapamil', 'diltiazem', 'cyclosporine', 'furosemide', 'rosuvastatin',
+    'citalopram', 'escitalopram', 'phenelzine', 'propranolol', 'heparin',
+    'oxycodone', 'diazepam', 'hydrochlorothiazide',
 }
 
 class QueryProcessor:
