@@ -332,33 +332,6 @@ export default function RxGuardDashboard() {
           <StatCard label="Life-Threatening" value={d.outcomes.lifeThreatening} sub={d.totalReports ? `${((d.outcomes.lifeThreatening/d.totalReports)*100).toFixed(1)}% of reports` : "No data"} color="#2A7D6F" icon="⚡" delay={0.4} />
         </div>
 
-        {/* Severity Distribution */}
-        {d.severityBreakdown && d.severityBreakdown.some(s => s.count > 0) && (
-          <div style={{ marginBottom: 28 }}>
-            <SectionCard title="Severity Distribution" subtitle="Risk profile for this drug pair">
-              <ResponsiveContainer width="100%" height={100}>
-                <BarChart
-                  data={[d.severityBreakdown.reduce((acc, s) => ({ ...acc, [s.severity]: s.count }), {})]}
-                  layout="vertical"
-                  margin={{ left: 0, right: 20, top: 8, bottom: 8 }}
-                >
-                  <XAxis type="number" tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} />
-                  <YAxis type="category" dataKey={() => ""} hide />
-                  <Tooltip
-                    contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontSize: 12 }}
-                    formatter={(v, name) => [`${v} reports`, name]}
-                  />
-                  <Bar dataKey="death" stackId="sev" fill="#d32f2f" name="Death" radius={[4, 0, 0, 4]} />
-                  <Bar dataKey="life-threatening" stackId="sev" fill="#ff7f0e" name="Life-Threatening" />
-                  <Bar dataKey="hospitalization" stackId="sev" fill="#1f77b4" name="Hospitalization" />
-                  <Bar dataKey="other" stackId="sev" fill="#aec7e8" name="Other" radius={[0, 4, 4, 0]} />
-                  <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: "#555" }}>{v}</span>} />
-                </BarChart>
-              </ResponsiveContainer>
-            </SectionCard>
-          </div>
-        )}
-
         {/* Charts Row — only show when we have report data */}
         {d.totalReports > 0 && d.topReactions && d.topReactions.length > 0 && (
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24, marginBottom: 28 }}>
@@ -404,8 +377,8 @@ export default function RxGuardDashboard() {
         {d.totalReports > 0 && d.ageDistribution && d.ageDistribution.some(a => a.count > 0) && (
           <div style={{ marginBottom: 28 }}>
             <SectionCard title="Age Distribution of Matched Reports" subtitle="Hover to see exact counts">
-              <ResponsiveContainer width="100%" height={180}>
-                <AreaChart data={d.ageDistribution} margin={{ left: 0, right: 20 }}>
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart data={d.ageDistribution} margin={{ left: 10, right: 20, top: 10, bottom: 10 }}>
                   <defs>
                     <linearGradient id="ageGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#2A7D6F" stopOpacity={0.3} />
@@ -413,7 +386,7 @@ export default function RxGuardDashboard() {
                     </linearGradient>
                   </defs>
                   <XAxis dataKey="range" tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} width={40} allowDecimals={false} />
                   <Tooltip contentStyle={{ borderRadius: 8, border: "none", fontSize: 12 }} formatter={(v) => [`${v} reports`]} />
                   <Area type="monotone" dataKey="count" stroke="#2A7D6F" strokeWidth={2} fill="url(#ageGrad)" />
                 </AreaChart>
