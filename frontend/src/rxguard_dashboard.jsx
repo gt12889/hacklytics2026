@@ -89,6 +89,25 @@ const MOCK_DATA = {
       outcomeType: "hospitalized",
     },
   ],
+  alternatives: [
+    { drugName: "Acetaminophen", drugClass: "Non-opioid analgesic",
+      whySafer: "Does not affect INR or increase bleeding risk with warfarin.",
+      monitoring: "Hepatic function; limit to <2g/day in elderly",
+      relativeRisk: "much-lower" },
+    { drugName: "Topical Diclofenac", drugClass: "Topical NSAID",
+      whySafer: "Minimal systemic absorption reduces INR elevation and GI bleeding risk.",
+      monitoring: "Application site reactions; periodic INR if long-term",
+      relativeRisk: "lower" },
+    { drugName: "Celecoxib (low-dose)", drugClass: "COX-2 selective NSAID",
+      whySafer: "COX-2 selectivity spares platelet function, less bleeding risk.",
+      monitoring: "INR weekly for first month; consider PPI co-therapy",
+      relativeRisk: "lower" },
+  ],
+  summary: "The combination of Warfarin and Ibuprofen presents a HIGH risk for gastrointestinal bleeding and INR elevation. FAERS data shows 1,532 adverse event reports for this combination, with 12% resulting in hospitalization and 3% in fatalities \u2014 predominantly in female patients over 60. This is corroborated by the FDA-approved drug label, which carries a Boxed Warning about increased GI bleeding risk when warfarin is co-administered with NSAIDs. Consider acetaminophen as an alternative analgesic; if an NSAID is required, use the lowest effective dose with PPI gastroprotection and increased INR monitoring.",
+  labelHits: [
+    { rank: 1, score: 0.87, doc_id: "warfarin-001", text: "Co-administration of warfarin with NSAIDs increases the risk of GI bleeding...", drugs: ["warfarin", "ibuprofen"], section: "BOXED WARNING", generic_name: "warfarin sodium" },
+    { rank: 2, score: 0.82, doc_id: "ibuprofen-002", text: "NSAIDs can reduce the natriuretic effect of diuretics and antihypertensives...", drugs: ["ibuprofen"], section: "DRUG INTERACTIONS", generic_name: "ibuprofen" },
+  ],
 };
 
 const SEX_COLORS = ["#2A7D6F", "#0D3D3A"];
@@ -229,6 +248,150 @@ function SimilarityBar({ value }) {
   );
 }
 
+function LabelSectionBadge({ section, drugName }) {
+  const colorMap = {
+    "BOXED WARNING": { bg: "#fdecea", color: "#d32f2f" },
+    "WARNINGS": { bg: "#fff8e1", color: "#f57f17" },
+    "WARNINGS AND PRECAUTIONS": { bg: "#fff8e1", color: "#f57f17" },
+    "DRUG INTERACTIONS": { bg: "#fff3e0", color: "#e65100" },
+  };
+  const s = colorMap[section?.toUpperCase()] || { bg: "#e8f5e9", color: "#2e7d32" };
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 4,
+      background: s.bg, color: s.color,
+      borderRadius: 20, padding: "3px 10px",
+      fontSize: 11, fontWeight: 600, fontFamily: "DM Sans, sans-serif",
+    }}>
+      {section}{drugName ? ` \u2014 ${drugName}` : ""}
+    </span>
+  );
+}
+
+function AlternativeCard({ alt, delay }) {
+  const riskColorMap = {
+    "much-lower": { bg: "#e8f5e9", color: "#2e7d32", label: "Much Lower Risk" },
+    "lower": { bg: "#fff8e1", color: "#f57f17", label: "Lower Risk" },
+    "similar": { bg: "#fff3e0", color: "#e65100", label: "Similar Risk" },
+  };
+  const risk = riskColorMap[alt.relativeRisk] || riskColorMap["lower"];
+
+  return (
+    <div style={{
+      background: "white",
+      borderRadius: 16,
+      boxShadow: "0 4px 24px rgba(0,0,0,0.07)",
+      padding: 20,
+      flex: "1 1 300px",
+      animation: `slideUp 0.5s ease ${delay}s both`,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: "#0D3D3A", fontFamily: "DM Sans, sans-serif" }}>
+            {alt.drugName}
+          </div>
+          <div style={{ fontSize: 12, color: "#888", fontFamily: "DM Sans, sans-serif" }}>
+            {alt.drugClass}
+          </div>
+        </div>
+        <span style={{
+          background: risk.bg, color: risk.color,
+          borderRadius: 20, padding: "4px 12px",
+          fontSize: 11, fontWeight: 600, fontFamily: "DM Sans, sans-serif",
+          whiteSpace: "nowrap",
+        }}>{risk.label}</span>
+      </div>
+      <div style={{ fontSize: 13, color: "#333", lineHeight: 1.6, marginBottom: 12, fontFamily: "DM Sans, sans-serif" }}>
+        {alt.whySafer}
+      </div>
+      <div style={{
+        background: "#f5f7f5",
+        borderRadius: 10,
+        padding: "10px 14px",
+        fontSize: 12,
+        color: "#555",
+        lineHeight: 1.5,
+        fontFamily: "DM Sans, sans-serif",
+      }}>
+        <span style={{ fontWeight: 600, color: "#0D3D3A" }}>Monitoring: </span>
+        {alt.monitoring}
+      </div>
+    </div>
+  );
+}
+
+function FormattedSummary({ text }) {
+  if (!text) return null;
+
+  // Parse **bold** markers into <strong> elements
+  const parseBold = (str) => {
+    const parts = str.split(/\*\*(.+?)\*\*/g);
+    return parts.map((part, i) =>
+      i % 2 === 1 ? <strong key={i} style={{ color: "#0D3D3A" }}>{part}</strong> : part
+    );
+  };
+
+  const lines = text.split("\n");
+  const elements = [];
+  let bulletBuffer = [];
+
+  const flushBullets = () => {
+    if (bulletBuffer.length === 0) return;
+    elements.push(
+      <ul key={`ul-${elements.length}`} style={{ margin: "6px 0", paddingLeft: 20, display: "flex", flexDirection: "column", gap: 4 }}>
+        {bulletBuffer.map((b, i) => (
+          <li key={i} style={{ fontSize: 14, color: "#333", lineHeight: 1.6 }}>{parseBold(b)}</li>
+        ))}
+      </ul>
+    );
+    bulletBuffer = [];
+  };
+
+  lines.forEach((line, i) => {
+    const trimmed = line.trim();
+    if (trimmed === "") {
+      flushBullets();
+      elements.push(<div key={`sp-${i}`} style={{ height: 8 }} />);
+    } else if (trimmed.startsWith("- ")) {
+      bulletBuffer.push(trimmed.slice(2));
+    } else {
+      flushBullets();
+      elements.push(
+        <div key={`ln-${i}`} style={{ fontSize: 14, color: "#0D3D3A", lineHeight: 1.7 }}>
+          {parseBold(trimmed)}
+        </div>
+      );
+    }
+  });
+  flushBullets();
+
+  return <div style={{ fontFamily: "DM Sans, sans-serif" }}>{elements}</div>;
+}
+
+function ClinicalInsightItem({ title, description }) {
+  return (
+    <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+      <div style={{
+        width: 28, height: 28, minWidth: 28,
+        borderRadius: 8,
+        background: "#e8f5e9",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 14,
+      }}>
+        <span style={{ color: "#2e7d32" }}>✓</span>
+      </div>
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#0D3D3A", fontFamily: "DM Sans, sans-serif", marginBottom: 2 }}>
+          {title}
+        </div>
+        <div style={{ fontSize: 13, color: "#555", lineHeight: 1.5, fontFamily: "DM Sans, sans-serif" }}>
+          {description}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Dashboard ─────────────────────────────────────────────────────────────
 export default function RxGuardDashboard() {
   const location = useLocation();
@@ -321,6 +484,113 @@ export default function RxGuardDashboard() {
                 <div><span style={{ color: "#888" }}>Prescribed: </span><strong>{parsed.prescribed_medications.join(", ")}</strong></div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Clinical Analysis */}
+        {d.summary && (
+          <div style={{
+            background: "white",
+            borderRadius: 16,
+            padding: "20px 28px",
+            marginBottom: 28,
+            boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
+            borderLeft: "4px solid #2A7D6F",
+            animation: "slideUp 0.45s ease both",
+          }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#2A7D6F", textTransform: "uppercase", letterSpacing: 1 }}>
+                Clinical Analysis
+              </div>
+              <div style={{ fontSize: 11, color: "#aaa", fontFamily: "DM Sans, sans-serif" }}>
+                Powered by Gemini + FAERS + DailyMed
+              </div>
+            </div>
+
+            {/* A. Risk Assessment */}
+            <div style={{ marginBottom: 20 }}>
+              <ClinicalInsightItem
+                title={`Risk Level: ${d.riskLevel || "UNKNOWN"} (${d.riskScore ?? "—"}/10)`}
+                description={
+                  (d.riskScore ?? 0) >= 8 ? "This interaction carries significant clinical risk and warrants immediate attention."
+                  : (d.riskScore ?? 0) >= 5 ? "This interaction poses moderate risk; monitoring and possible dose adjustment recommended."
+                  : "This interaction carries relatively lower risk, but standard precautions apply."
+                }
+              />
+
+              {/* FDA Label Text Excerpts */}
+              {d.labelHits && d.labelHits.length > 0 && (
+                <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                  {d.labelHits.map((hit, i) => (
+                    <div key={i} style={{
+                      background: hit.section === "BOXED WARNING" ? "#fdecea" : "#fff8e1",
+                      borderLeft: `3px solid ${hit.section === "BOXED WARNING" ? "#d32f2f" : "#f57f17"}`,
+                      borderRadius: "0 8px 8px 0",
+                      padding: "10px 14px",
+                    }}>
+                      <div style={{
+                        fontSize: 11, fontWeight: 700,
+                        color: hit.section === "BOXED WARNING" ? "#d32f2f" : "#f57f17",
+                        textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4,
+                      }}>
+                        {hit.section} — {hit.generic_name}
+                      </div>
+                      <div style={{ fontSize: 13, color: "#333", lineHeight: 1.5, fontStyle: "italic", fontFamily: "DM Sans, sans-serif" }}>
+                        &ldquo;{hit.text}&rdquo;
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* B. Gemini Clinical Narrative */}
+            <div style={{ borderTop: "1px solid #e8ebe4", paddingTop: 16, marginBottom: 20 }}>
+              <FormattedSummary text={d.summary} />
+            </div>
+
+            {/* C. Safer Alternatives (integrated) */}
+            {d.alternatives && d.alternatives.length > 0 && (
+              <div style={{ borderTop: "1px solid #e8ebe4", paddingTop: 16 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#0D3D3A", textTransform: "uppercase", letterSpacing: 1, marginBottom: 14 }}>
+                  Safer Alternatives to {d.query?.newPrescription || "Prescribed Drug"}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  {d.alternatives.map((alt, i) => {
+                    const riskColorMap = {
+                      "much-lower": { bg: "#e8f5e9", color: "#2e7d32", label: "Much Lower Risk" },
+                      "lower": { bg: "#fff8e1", color: "#f57f17", label: "Lower Risk" },
+                      "similar": { bg: "#fff3e0", color: "#e65100", label: "Similar Risk" },
+                    };
+                    const risk = riskColorMap[alt.relativeRisk] || riskColorMap["lower"];
+                    return (
+                      <div key={i} style={{
+                        padding: "12px 0",
+                        borderTop: i > 0 ? "1px solid #f0f0f0" : "none",
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: "#0D3D3A", fontFamily: "DM Sans, sans-serif" }}>
+                            {alt.drugName} + {d.query?.currentMed || "Current Med"}
+                          </span>
+                          <span style={{
+                            background: risk.bg, color: risk.color,
+                            borderRadius: 20, padding: "2px 10px",
+                            fontSize: 11, fontWeight: 600, fontFamily: "DM Sans, sans-serif",
+                            whiteSpace: "nowrap",
+                          }}>● {risk.label}</span>
+                        </div>
+                        <div style={{ fontSize: 13, color: "#2e7d32", lineHeight: 1.5, fontFamily: "DM Sans, sans-serif", marginBottom: 2 }}>
+                          ✓ Pro: {alt.whySafer}
+                        </div>
+                        <div style={{ fontSize: 13, color: "#d32f2f", lineHeight: 1.5, fontFamily: "DM Sans, sans-serif" }}>
+                          ✗ Con: {alt.monitoring}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
