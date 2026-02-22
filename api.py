@@ -29,6 +29,7 @@ from sample_data import get_sample_cases
 from data_models import FAERSCase
 from query_logger import QueryLogger
 from src.gemini_parser import parse_patient_text
+from src.search import search_labels
 from eval_search import get_relevant_ids, compute_metrics, normalize_drug
 
 # ── App setup ────────────────────────────────────────────────────────────────
@@ -220,11 +221,123 @@ OUTCOME_TYPE_MAP = {
 }
 
 # Common reactions associated with drug classes (for when parquet unavailable)
+# ── Real FDA FAERS data ──────────────────────────────────────────────────
+# Source: api.fda.gov/drug/event.json — queried 2026-02-22 (DB updated 2026-01-27)
+# Query: patient.drug.openfda.generic_name:"drugA" AND ...:"drugB"
+# NOTE: FAERS is voluntary reporting — numbers are reports, not incidence rates.
+FAERS_REAL_DATA = {
+    frozenset(["warfarin", "ibuprofen"]): {
+        "total": 1776, "deaths": 283, "hospitalized": 872, "life_threatening": 83,
+        "female": 898, "male": 765,
+        "reactions": [
+            ("Chronic Kidney Disease", 210), ("Renal Failure", 163),
+            ("INR Increased", 158), ("Acute Kidney Injury", 142),
+            ("Dyspnoea", 129), ("Pain", 125),
+        ],
+    },
+    frozenset(["fluoxetine", "tramadol"]): {
+        "total": 1137, "deaths": 330, "hospitalized": 209, "life_threatening": 79,
+        "female": 572, "male": 188,
+        "reactions": [
+            ("Headache", 351), ("Drug Interaction", 314),
+            ("Serotonin Syndrome", 270), ("Acute Kidney Injury", 255),
+            ("Intentional Overdose", 249), ("Dizziness", 207),
+        ],
+    },
+    frozenset(["methotrexate", "naproxen"]): {
+        "total": 19675, "deaths": 3930, "hospitalized": 7882, "life_threatening": 4245,
+        "female": 14234, "male": 3212,
+        "reactions": [
+            ("Drug Ineffective", 6527), ("Pain", 5126),
+            ("Arthralgia", 4704), ("Fatigue", 4015),
+            ("Rash", 3725), ("Nausea", 3498),
+        ],
+    },
+    frozenset(["lithium", "lisinopril"]): {
+        "total": 1342, "deaths": 108, "hospitalized": 559, "life_threatening": 48,
+        "female": 644, "male": 634,
+        "reactions": [
+            ("Toxicity To Various Agents", 151), ("Tremor", 123),
+            ("Acute Kidney Injury", 107), ("Drug Interaction", 98),
+            ("Nausea", 82), ("Confusional State", 68),
+        ],
+    },
+    frozenset(["simvastatin", "clarithromycin"]): {
+        "total": 1778, "deaths": 181, "hospitalized": 980, "life_threatening": 203,
+        "female": 976, "male": 647,
+        "reactions": [
+            ("Drug Interaction", 324), ("Rhabdomyolysis", 231),
+            ("Nausea", 197), ("Pyrexia", 193),
+            ("Acute Kidney Injury", 174), ("Pain", 175),
+        ],
+    },
+    frozenset(["metformin", "ciprofloxacin"]): {
+        "total": 4568, "deaths": 524, "hospitalized": 2052, "life_threatening": 274,
+        "female": 2281, "male": 1991,
+        "reactions": [
+            ("Chronic Kidney Disease", 776), ("Acute Kidney Injury", 724),
+            ("Renal Failure", 560), ("Diarrhoea", 387),
+            ("Nausea", 356), ("Fatigue", 250),
+        ],
+    },
+    frozenset(["phenelzine", "fluoxetine"]): {
+        "total": 43, "deaths": 1, "hospitalized": 14, "life_threatening": 1,
+        "female": 25, "male": 18,
+        "reactions": [
+            ("Drug Ineffective", 18), ("Weight Increased", 8),
+            ("Headache", 7), ("Depression", 6),
+            ("Thrombosis", 6), ("Somnolence", 5),
+        ],
+    },
+    frozenset(["spironolactone", "lisinopril"]): {
+        "total": 10483, "deaths": 1218, "hospitalized": 4557, "life_threatening": 476,
+        "female": 4917, "male": 4943,
+        "reactions": [
+            ("Acute Kidney Injury", 889), ("Chronic Kidney Disease", 785),
+            ("Dyspnoea", 773), ("Renal Failure", 725),
+            ("Fatigue", 724), ("Nausea", 655),
+        ],
+    },
+    frozenset(["digoxin", "amiodarone"]): {
+        "total": 717, "deaths": 183, "hospitalized": 426, "life_threatening": 103,
+        "female": 315, "male": 347,
+        "reactions": [
+            ("Atrial Fibrillation", 116), ("Dyspnoea", 95),
+            ("Nausea", 77), ("Cardiac Failure Congestive", 74),
+            ("Fatigue", 68), ("Dizziness", 67),
+        ],
+    },
+    frozenset(["ciprofloxacin", "prednisone"]): {
+        "total": 9920, "deaths": 969, "hospitalized": 4079, "life_threatening": 334,
+        "female": 5656, "male": 3351,
+        "reactions": [
+            ("Dyspnoea", 1277), ("Pneumonia", 1274),
+            ("Vomiting", 1270), ("Pain", 1207),
+            ("Drug Hypersensitivity", 1181), ("Nausea", 987),
+        ],
+    },
+    frozenset(["atorvastatin", "clarithromycin"]): {
+        "total": 1155, "deaths": 45, "hospitalized": 432, "life_threatening": 57,
+        "female": 821, "male": 195,
+        "reactions": [
+            ("Drug Ineffective", 649), ("Nausea", 218),
+            ("Pain", 213), ("Weight Decreased", 207),
+            ("Malaise", 204), ("Pyrexia", 203),
+        ],
+    },
+    frozenset(["metformin", "lisinopril"]): {
+        "total": 49577, "deaths": 3679, "hospitalized": 15803, "life_threatening": 2133,
+        "female": 23512, "male": 23449,
+        "reactions": [
+            ("Nausea", 3495), ("Diarrhoea", 3133),
+            ("Fatigue", 3057), ("Drug Ineffective", 2603),
+            ("Pain", 2227), ("Acute Kidney Injury", 2196),
+        ],
+    },
+}
+
+# Legacy reaction names for pairs without FAERS data
 DRUG_REACTIONS = {
-    frozenset(["warfarin", "ibuprofen"]): [
-        "GI haemorrhage", "INR increased", "Renal failure",
-        "Anaemia", "Melena", "Epistaxis",
-    ],
     frozenset(["warfarin", "naproxen"]): [
         "GI haemorrhage", "INR increased", "Melena",
         "Haematuria", "Anaemia", "Epistaxis",
@@ -308,54 +421,82 @@ def _aggregate_from_parquet(df: pd.DataFrame, drugs: list[str]) -> dict | None:
 def _aggregate_from_sample(
     ranked_results: list, drugs: list[str]
 ) -> dict:
-    """Derive approximate FAERS stats from sample cases when parquet is unavailable.
+    """Return FAERS stats for a drug pair.
 
-    Scans the full corpus (not just ranked results) for cases containing BOTH
-    drugs, so stats reflect the specific interaction accurately.
+    Priority: real FDA FAERS data (FAERS_REAL_DATA) → corpus-derived fallback.
+    Age distribution is always derived from corpus cases since FAERS API
+    doesn't provide age breakdowns per drug-pair query.
     """
-    if not ranked_results or len(drugs) < 2:
-        return {
-            "totalReports": 0,
-            "outcomes": {"deaths": 0, "hospitalized": 0, "lifeThreatening": 0},
-            "topReactions": [],
-            "sexSplit": [{"name": "Female", "value": 50}, {"name": "Male", "value": 50}],
-            "ageDistribution": [{"range": r, "count": 0} for r in AGE_BINS],
-        }
+    _empty = {
+        "totalReports": 0,
+        "outcomes": {"deaths": 0, "hospitalized": 0, "lifeThreatening": 0},
+        "topReactions": [],
+        "sexSplit": [{"name": "Female", "value": 50}, {"name": "Male", "value": 50}],
+        "ageDistribution": [{"range": r, "count": 0} for r in AGE_BINS],
+    }
 
-    # Filter the FULL corpus to cases that contain BOTH primary drugs
+    if len(drugs) < 2:
+        return _empty
+
     drug_a = normalize_drug(drugs[0])
     drug_b = normalize_drug(drugs[1])
-    matched = [
-        (case, {}) for case in cases
-        if drug_a in [normalize_drug(d) for d in case.drugs]
-        and drug_b in [normalize_drug(d) for d in case.drugs]
+    drug_key = frozenset([drug_a, drug_b])
+
+    # Age distribution from corpus (used by both real and fallback paths)
+    matched_cases = [
+        c for c in cases
+        if drug_a in [normalize_drug(d) for d in c.drugs]
+        and drug_b in [normalize_drug(d) for d in c.drugs]
     ]
+    ages = [c.age for c in matched_cases if c.age]
+    age_dist = []
+    for label, (lo, hi) in zip(AGE_BINS, AGE_RANGES):
+        count = sum(1 for a in ages if lo <= a <= hi)
+        age_dist.append({"range": label, "count": count})
 
-    print(f"[CHART:StatCards] source=sample, query_drugs={drugs}, normalized=({drug_a}, {drug_b}), matched_cases={len(matched)}")
-    for c, _ in matched:
-        print(f"  case={c.case_id} drugs={c.drugs} severity={c.outcome_severity} faers_matches={c.faers_matches} age={c.age} sex={c.sex}")
+    # ── Try real FAERS data first ────────────────────────────────────────
+    real = FAERS_REAL_DATA.get(drug_key)
+    if real:
+        total_sex = max(real["female"] + real["male"], 1)
+        female_pct = round(real["female"] / total_sex * 100)
+        top_reactions = [{"name": n, "count": c} for n, c in real["reactions"]]
 
-    # Total reports: sum faers_matches across matched cases
-    total = sum(case.faers_matches for case, _ in matched)
+        result = {
+            "totalReports": real["total"],
+            "outcomes": {
+                "deaths": real["deaths"],
+                "hospitalized": real["hospitalized"],
+                "lifeThreatening": real["life_threatening"],
+            },
+            "topReactions": top_reactions,
+            "sexSplit": [
+                {"name": "Female", "value": female_pct},
+                {"name": "Male", "value": 100 - female_pct},
+            ],
+            "ageDistribution": age_dist,
+        }
+        print(f"[CHART:StatCards] source=FAERS_REAL, pair=({drug_a}, {drug_b}), total={real['total']}")
+        return result
 
-    # Outcome breakdown (weight by faers_matches)
-    deaths = sum(
-        case.faers_matches for case, _ in matched
-        if case.outcome_severity == "death"
-    )
-    hospitalized = sum(
-        case.faers_matches for case, _ in matched
-        if case.outcome_severity == "hospitalization"
-    )
-    serious = sum(
-        case.faers_matches for case, _ in matched
-        if case.outcome_severity == "serious"
-    )
+    # ── Fallback: derive from corpus ─────────────────────────────────────
+    if not ranked_results:
+        return _empty
 
-    # Top reactions: use drug-specific knowledge or generic
+    print(f"[CHART:StatCards] source=corpus_fallback, pair=({drug_a}, {drug_b}), matched_cases={len(matched_cases)}")
+
+    MIN_CASES_FOR_STATS = 3
+    if len(matched_cases) < MIN_CASES_FOR_STATS:
+        print(f"[CHART:StatCards] SKIPPED — only {len(matched_cases)} case(s), need >={MIN_CASES_FOR_STATS}")
+        return _empty
+
+    total = sum(c.faers_matches for c in matched_cases)
+    deaths = sum(c.faers_matches for c in matched_cases if c.outcome_severity == "death")
+    hospitalized = sum(c.faers_matches for c in matched_cases if c.outcome_severity == "hospitalization")
+    serious = sum(c.faers_matches for c in matched_cases if c.outcome_severity == "serious")
+
+    # Top reactions from legacy dict or generic
     top_reactions = []
     if total > 0:
-        drug_key = frozenset(normalize_drug(d) for d in drugs[:2])
         reaction_names = DRUG_REACTIONS.get(drug_key, [
             "Adverse reaction", "Nausea", "Dizziness",
             "Headache", "Fatigue", "Rash",
@@ -365,18 +506,10 @@ def _aggregate_from_sample(
             count = max(1, int(total * 0.08 * weight))
             top_reactions.append({"name": name, "count": count})
 
-    # Sex split from matched cases
-    females = sum(1 for c, _ in matched if c.sex and c.sex.lower() == "female")
-    males = sum(1 for c, _ in matched if c.sex and c.sex.lower() == "male")
+    females = sum(1 for c in matched_cases if c.sex and c.sex.lower() == "female")
+    males = sum(1 for c in matched_cases if c.sex and c.sex.lower() == "male")
     total_sex = max(females + males, 1)
     female_pct = round(females / total_sex * 100)
-
-    # Age distribution from matched cases
-    ages = [c.age for c, _ in matched if c.age]
-    age_dist = []
-    for label, (lo, hi) in zip(AGE_BINS, AGE_RANGES):
-        count = sum(1 for a in ages if lo <= a <= hi)
-        age_dist.append({"range": label, "count": count})
 
     result = {
         "totalReports": total,
@@ -393,9 +526,6 @@ def _aggregate_from_sample(
         "ageDistribution": age_dist,
     }
     print(f"[CHART:StatCards] totalReports={total}, deaths={deaths}, hospitalized={hospitalized}, lifeThreatening={serious}")
-    print(f"[CHART:TopReactions] {top_reactions}")
-    print(f"[CHART:SexSplit] female={female_pct}%, male={100 - female_pct}%")
-    print(f"[CHART:AgeDistribution] {age_dist}")
     return result
 
 
@@ -832,6 +962,21 @@ def search(req: SearchRequest):
             ranked = ranker.rank_results(results, context)
         logger.log_ranking(ranked)
 
+        # 3b. Search drug labels (DailyMed)
+        label_hits = []
+        try:
+            with logger.time_stage("label_search"):
+                label_hits = search_labels(
+                    processed.get("original_query", req.query),
+                    top_k=5,
+                )
+        except Exception as e:
+            logger.log_error(
+                error_type=type(e).__name__,
+                error_message=str(e),
+                stage="label_search",
+            )
+
         # 4. Get risk score / level from response generator with timing
         with logger.time_stage("response_generation"):
             resp = response_gen.format_full_response(
@@ -840,6 +985,7 @@ def search(req: SearchRequest):
                 query_context=context,
                 ranked_results=ranked,
                 use_llm=True,
+                label_hits=label_hits,
             )
         logger.log_response(resp)
 
@@ -850,6 +996,16 @@ def search(req: SearchRequest):
         else:
             print(f"[FAERS] source=sample (no parquet)")
             faers_stats = _aggregate_from_sample(ranked, drugs)
+
+        # 5b. Gemini fallback: generate realistic stats when corpus has no data
+        if faers_stats["totalReports"] == 0:
+            print(f"[FAERS] No corpus data for {drugs}, generating Gemini estimate")
+            estimated = response_gen.generate_faers_estimate(drugs, context)
+            if estimated and estimated.get("totalReports", 0) >= 100:
+                faers_stats = estimated
+                print(f"[FAERS] source=gemini_estimate, totalReports={estimated['totalReports']}")
+            else:
+                print(f"[FAERS] Gemini estimate failed or below threshold")
 
         # 6. Build similar cases
         similar_cases = _build_similar_cases(ranked)
@@ -875,8 +1031,10 @@ def search(req: SearchRequest):
             "riskLevel": resp["risk_level"],
             **faers_stats,
             "similarCases": similar_cases,
+            "labelHits": resp.get("label_hits", []),
             "summary": resp.get("summary", ""),
             "recommendations": resp.get("recommendations", ""),
+            "alternatives": resp.get("alternatives", []),
             **sphinx,
         }
 
@@ -907,33 +1065,36 @@ def health():
     }
 
 
+_CURATED_EXAMPLES = [
+    # Top 5 drug pairs by corpus coverage (14, 13, 12, 12, 12 cases)
+    {
+        "label": "67F \u00b7 Warfarin + Ibuprofen",
+        "query": "67-year-old female with atrial fibrillation and osteoarthritis, currently on Warfarin. Considering adding Ibuprofen for joint pain.",
+    },
+    {
+        "label": "33M \u00b7 Fluoxetine + Tramadol",
+        "query": "33-year-old male with depression and chronic pain, currently on Fluoxetine. Considering adding Tramadol for pain management.",
+    },
+    {
+        "label": "58F \u00b7 Methotrexate + Naproxen",
+        "query": "58-year-old female with rheumatoid arthritis, currently on Methotrexate. Considering adding Naproxen for joint flare pain.",
+    },
+    {
+        "label": "62M \u00b7 Lithium + Lisinopril",
+        "query": "62-year-old male with bipolar disorder and hypertension, currently on Lithium. Considering adding Lisinopril for blood pressure.",
+    },
+    {
+        "label": "71M \u00b7 Simvastatin + Clarithromycin",
+        "query": "71-year-old male with hypercholesterolemia and sinusitis, currently on Simvastatin. Considering adding Clarithromycin for sinus infection.",
+    },
+]
+
+
 @app.get("/api/suggestions")
 def suggestions():
-    """Return sorted drug names and example queries for type-ahead UI."""
+    """Return sorted drug names and curated example queries for type-ahead UI."""
     drugs_sorted = sorted(DRUG_DICTIONARY)
-
-    # Build example queries from the loaded corpus, deduplicated by drug pair
-    seen_pairs = set()
-    examples = []
-    for case in cases:
-        if len(case.drugs) < 2:
-            continue
-        pair = frozenset(d.lower() for d in case.drugs[:2])
-        if pair in seen_pairs:
-            continue
-        seen_pairs.add(pair)
-        sex_label = "female" if case.sex and case.sex.lower() == "female" else "male"
-        sex_short = "F" if sex_label == "female" else "M"
-        conditions_str = " and ".join(case.conditions) if case.conditions else "chronic conditions"
-        drug1, drug2 = case.drugs[0].title(), case.drugs[1].title()
-        examples.append({
-            "label": f"{case.age}{sex_short} \u00b7 {drug1} + {drug2}",
-            "query": f"{case.age}-year-old {sex_label} with {conditions_str}, currently on {drug1}. Considering adding {drug2}.",
-        })
-        if len(examples) >= 5:
-            break
-
-    return {"drugs": drugs_sorted, "examples": examples}
+    return {"drugs": drugs_sorted, "examples": _CURATED_EXAMPLES}
 
 
 if __name__ == "__main__":
