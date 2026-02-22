@@ -193,14 +193,16 @@ export default function LandingPage() {
   }
 
   return (
-    <div style={{ fontFamily: "DM Sans, sans-serif", overflowX: "hidden" }}>
+    <div style={{ fontFamily: "DM Sans, sans-serif", overflowX: "hidden", overflowY: "auto" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
         @keyframes slideUp {
           from { opacity: 0; transform: translateY(30px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
       `}</style>
 
       {/* ════════════════════════════════════════════════════════════════════
