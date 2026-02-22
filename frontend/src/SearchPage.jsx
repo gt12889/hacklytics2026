@@ -1,12 +1,95 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
+function NoDataModal({ onClose, onRetry }) {
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 9999,
+      background: "rgba(13, 61, 58, 0.45)",
+      backdropFilter: "blur(6px)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      animation: "fadeIn 0.25s ease",
+    }}>
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+      `}</style>
+      <div style={{
+        background: "white",
+        borderRadius: 20,
+        padding: "36px 40px",
+        maxWidth: 460,
+        width: "90%",
+        boxShadow: "0 24px 64px rgba(0,0,0,0.18)",
+        animation: "scaleIn 0.3s ease",
+        textAlign: "center",
+      }}>
+        <div style={{
+          width: 56, height: 56, borderRadius: 16,
+          background: "#fff8e1",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          margin: "0 auto 20px",
+          fontSize: 28,
+        }}>
+          !
+        </div>
+        <div style={{
+          fontSize: 20, fontWeight: 700, color: "#0D3D3A",
+          fontFamily: "DM Sans, sans-serif", marginBottom: 10,
+        }}>
+          Insufficient Data
+        </div>
+        <div style={{
+          fontSize: 14, color: "#555", lineHeight: 1.7,
+          fontFamily: "DM Sans, sans-serif", marginBottom: 28,
+        }}>
+          We couldn't find enough FAERS adverse event data for this drug combination.
+          Please ensure your query includes <strong>two identifiable medications</strong> and
+          a clear patient description.
+        </div>
+        <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+          <button
+            onClick={onRetry}
+            style={{
+              background: "linear-gradient(135deg, #2A7D6F, #0D3D3A)",
+              color: "white", border: "none", borderRadius: 10,
+              padding: "11px 28px", fontSize: 14, fontWeight: 600,
+              cursor: "pointer", fontFamily: "DM Sans, sans-serif",
+              boxShadow: "0 4px 14px rgba(42,125,111,0.35)",
+              transition: "transform 0.2s",
+            }}
+            onMouseOver={e => e.currentTarget.style.transform = "translateY(-1px)"}
+            onMouseOut={e => e.currentTarget.style.transform = "translateY(0)"}
+          >
+            Revise Query
+          </button>
+          <button
+            onClick={onClose}
+            style={{
+              background: "#f0f4f3", color: "#0D3D3A",
+              border: "1px solid #c4d9d6", borderRadius: 10,
+              padding: "11px 28px", fontSize: 14, fontWeight: 600,
+              cursor: "pointer", fontFamily: "DM Sans, sans-serif",
+              transition: "all 0.2s",
+            }}
+            onMouseOver={e => { e.currentTarget.style.background = "#e0ebe8"; }}
+            onMouseOut={e => { e.currentTarget.style.background = "#f0f4f3"; }}
+          >
+            View Anyway
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SearchPage() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [examples, setExamples] = useState([]);
+  const [noDataPayload, setNoDataPayload] = useState(null);
 
   useEffect(() => {
     fetch("/api/suggestions")
@@ -38,6 +121,15 @@ export default function SearchPage() {
       }
       const data = await searchRes.json();
       const parsed = parseRes.ok ? await parseRes.json().catch(() => null) : null;
+
+      // Check for zero FAERS data
+      const t = data.totalReports || 0;
+      const o = data.outcomes || {};
+      if (t === 0 && !o.deaths && !o.hospitalized && !o.lifeThreatening) {
+        setNoDataPayload({ data, parsed });
+        return;
+      }
+
       navigate("/result", { state: { data, parsed } });
     } catch (err) {
       setError(err.message);
@@ -225,6 +317,16 @@ export default function SearchPage() {
           {loading ? "Analyzing ..." : "Analyze Adverse Event Risk"}
         </button>
       </form>
+
+      {noDataPayload && (
+        <NoDataModal
+          onRetry={() => setNoDataPayload(null)}
+          onClose={() => {
+            navigate("/result", { state: noDataPayload });
+            setNoDataPayload(null);
+          }}
+        />
+      )}
     </div>
   );
 }
