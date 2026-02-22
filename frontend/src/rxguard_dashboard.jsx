@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, AreaChart, Area } from "recharts";
 
 // ── Mock Data ─────────────────────────────────────────────────────────────────
@@ -224,10 +225,14 @@ function SimilarityBar({ value }) {
 }
 
 // ── Main Dashboard ─────────────────────────────────────────────────────────────
-export default function RxGuardDashboard({ onNewSearch }) {
+export default function RxGuardDashboard() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [expandedCase, setExpandedCase] = useState(null);
   const [hoveredBar, setHoveredBar] = useState(null);
-  const d = MOCK_DATA;
+  const d = location.state?.data || MOCK_DATA;
+
+  const onNewSearch = () => navigate("/home");
 
   return (
     <div style={{
@@ -254,8 +259,24 @@ export default function RxGuardDashboard({ onNewSearch }) {
         <div style={{ marginBottom: 32, animation: "slideUp 0.4s ease both" }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
             <div>
-              <div style={{ fontSize: 36, fontWeight: 700, color: "#0D3D3A", lineHeight: 1.1 }}>
-                Drug Interaction Risk Summary
+              <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+                <div style={{ fontSize: 36, fontWeight: 700, color: "#0D3D3A", lineHeight: 1.1 }}>
+                  Drug Interaction Risk Summary
+                </div>
+                {d.riskScore != null && (
+                  <span style={{
+                    background: d.riskScore >= 8 ? "#d32f2f" : d.riskScore >= 5 ? "#f57f17" : "#2A7D6F",
+                    color: "white",
+                    borderRadius: 8,
+                    padding: "6px 14px",
+                    fontSize: 14,
+                    fontWeight: 700,
+                    fontFamily: "Space Mono, monospace",
+                    whiteSpace: "nowrap",
+                  }}>
+                    {d.riskScore.toFixed(1)} / 10 — {d.riskLevel}
+                  </span>
+                )}
               </div>
               <div style={{ fontSize: 14, color: "#888", marginTop: 4 }}>
                 {d.query.currentMed} + {d.query.newPrescription} · {d.query.conditions}
@@ -285,6 +306,22 @@ export default function RxGuardDashboard({ onNewSearch }) {
           <StatCard label="Hospitalized" value={d.outcomes.hospitalized} sub={`${((d.outcomes.hospitalized/d.totalReports)*100).toFixed(1)}% of reports`} color="#2A7D6F" icon="🏥" delay={0.3} />
           <StatCard label="Life-Threatening" value={d.outcomes.lifeThreatening} sub={`${((d.outcomes.lifeThreatening/d.totalReports)*100).toFixed(1)}% of reports`} color="#2A7D6F" icon="⚡" delay={0.4} />
         </div>
+
+        {/* Summary & Recommendations */}
+        {(d.summary || d.recommendations) && (
+          <div style={{ display: "grid", gridTemplateColumns: d.summary && d.recommendations ? "1fr 1fr" : "1fr", gap: 24, marginBottom: 28 }}>
+            {d.summary && (
+              <SectionCard title="Clinical Summary">
+                <div style={{ fontSize: 13, color: "#333", lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{d.summary}</div>
+              </SectionCard>
+            )}
+            {d.recommendations && (
+              <SectionCard title="Recommendations">
+                <div style={{ fontSize: 13, color: "#333", lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{d.recommendations}</div>
+              </SectionCard>
+            )}
+          </div>
+        )}
 
         {/* Charts Row */}
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24, marginBottom: 28 }}>
