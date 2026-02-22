@@ -50,3 +50,7 @@ models/
 # Data files
 data/raw/*.json
 data/processed/*.parquet
+
+# Log files
+logs/
+*.log

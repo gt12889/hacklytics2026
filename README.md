@@ -115,6 +115,19 @@ streamlit run app.py
   - Outcome severity: 12% hospitalization, 3% fatal
 - **Recommendation**: Consider acetaminophen as alternative. If NSAID required, use lowest effective dose with PPI gastroprotection and increased INR monitoring.
 
+## 📦 Batched FAERS Pipeline
+
+To load more FAERS data in batches (pair batches + ramping report volume):
+
+```bash
+python run_pipeline_batched.py                     # 10 pairs/batch, stages 1K→2.5K→5K
+python run_pipeline_batched.py --pair-batch 5      # 5 pairs per batch
+python run_pipeline_batched.py --stages 1000 5000 10000   # custom volume stages
+python run_pipeline_batched.py --labels            # also run DailyMed label pipeline
+```
+
+Each stage collects more reports per pair, then runs clean → build → embed on the full dataset. Safe to stop and resume; cached pairs are skipped when they already have enough reports.
+
 ## 🔧 Configuration
 
 - **Search Engine**: Choose between V1 (keyword), V2 (TFIDF), or V3 (vector search)
@@ -134,6 +147,7 @@ hacklytics2026/
 ├── sample_data.py           # Sample FAERS cases for testing
 ├── actian_vector_db.py      # Actian VectorAI DB wrapper
 ├── run_pipeline.py          # Full FAERS data pipeline runner
+├── run_pipeline_batched.py  # Batched pipeline (pair batches + volume stages)
 ├── run_label_pipeline.py    # DailyMed drug label pipeline
 ├── docker-compose.yml       # Docker config for Actian VectorAI DB
 ├── requirements.txt         # Python dependencies

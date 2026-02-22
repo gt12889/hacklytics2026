@@ -10,6 +10,7 @@ from results_ranker import ResultsRanker
 from response_generator import ResponseGenerator
 from sample_data import get_sample_cases
 from data_models import FAERSCase
+from query_logger import QueryLogger
 
 # Try to import Actian DB (optional)
 try:
@@ -32,6 +33,7 @@ if 'cases' not in st.session_state:
     st.session_state.query_processor = QueryProcessor()
     st.session_state.ranker = ResultsRanker()
     st.session_state.response_generator = ResponseGenerator()
+    st.session_state.query_logger = QueryLogger()
     
     # Initialize search engines
     st.session_state.v1_search = V1KeywordSearch()
@@ -152,67 +154,106 @@ def main():
             st.error("Please enter a query")
             return
         
+        # Initialize logger for this run
+        logger = st.session_state.query_logger
+        logger.start_run(query)
+        
         with st.spinner("Processing query and searching cases..."):
-            # Process query
-            processed = st.session_state.query_processor.process_query(query)
-            
-            # Perform search based on version
-            if "V3Actian" in search_version:
-                if st.session_state.v3_actian_search:
-                    search_results = st.session_state.v3_actian_search.search(
-                        processed['embedding'], 
-                        top_k=10
+            try:
+                # Process query with timing
+                with logger.time_stage("query_processing"):
+                    processed = st.session_state.query_processor.process_query(query)
+                logger.log_query_processing(processed)
+                
+                # Perform search based on version with timing
+                with logger.time_stage("search"):
+                    if "V3Actian" in search_version:
+                        if st.session_state.v3_actian_search:
+                            search_results = st.session_state.v3_actian_search.search(
+                                processed['embedding'], 
+                                top_k=10
+                            )
+                            actual_engine = "V3Actian"
+                        else:
+                            st.error("Actian VectorAI DB not available. Using in-memory search instead.")
+                            search_results = st.session_state.v3_search.search(
+                                processed['embedding'], 
+                                top_k=10
+                            )
+                            actual_engine = "V3 (fallback)"
+                    elif "V3" in search_version:
+                        search_results = st.session_state.v3_search.search(
+                            processed['embedding'], 
+                            top_k=10
+                        )
+                        actual_engine = "V3"
+                    elif "V2" in search_version:
+                        search_results = st.session_state.v2_search.search(
+                            processed['original_query'],
+                            top_k=10
+                        )
+                        actual_engine = "V2"
+                    else:  # V1
+                        search_results = st.session_state.v1_search.search(
+                            processed['drugs'],
+                            st.session_state.cases,
+                            top_k=10
+                        )
+                        actual_engine = "V1"
+                
+                logger.log_search(actual_engine, search_results)
+                
+                # Rank results with timing
+                with logger.time_stage("ranking"):
+                    ranked_results = st.session_state.ranker.rank_results(
+                        search_results,
+                        processed['context']
                     )
+                logger.log_ranking(ranked_results)
+
+                # Optional: search drug labels (DailyMed) for fusion
+                label_hits = []
+                if use_label_fusion:
+                    try:
+                        with logger.time_stage("label_search"):
+                            from src.search import search_labels
+                            label_hits = search_labels(
+                                processed.get('original_query', query),
+                                top_k=5
+                            )
+                    except Exception as e:
+                        logger.log_error(
+                            error_type=type(e).__name__,
+                            error_message=str(e),
+                            stage="label_search"
+                        )
                 else:
-                    st.error("Actian VectorAI DB not available. Using in-memory search instead.")
-                    search_results = st.session_state.v3_search.search(
-                        processed['embedding'], 
-                        top_k=10
-                    )
-            elif "V3" in search_version:
-                search_results = st.session_state.v3_search.search(
-                    processed['embedding'], 
-                    top_k=10
-                )
-            elif "V2" in search_version:
-                search_results = st.session_state.v2_search.search(
-                    processed['original_query'],
-                    top_k=10
-                )
-            else:  # V1
-                search_results = st.session_state.v1_search.search(
-                    processed['drugs'],
-                    st.session_state.cases,
-                    top_k=10
-                )
-            
-            # Rank results
-            ranked_results = st.session_state.ranker.rank_results(
-                search_results,
-                processed['context']
-            )
+                    logger.log_timing("label_search", 0.0)
 
-            # Optional: search drug labels (DailyMed) for fusion
-            label_hits = []
-            if use_label_fusion:
-                try:
-                    from src.search import search_labels
-                    label_hits = search_labels(
-                        processed.get('original_query', query),
-                        top_k=5
+                # Generate response with timing
+                with logger.time_stage("response_generation"):
+                    response = st.session_state.response_generator.format_full_response(
+                        query,
+                        processed['drugs'],
+                        processed['context'],
+                        ranked_results,
+                        use_llm=use_llm,
+                        label_hits=label_hits
                     )
-                except Exception:
-                    pass
-
-            # Generate response
-            response = st.session_state.response_generator.format_full_response(
-                query,
-                processed['drugs'],
-                processed['context'],
-                ranked_results,
-                use_llm=use_llm,
-                label_hits=label_hits
-            )
+                logger.log_response(response)
+                
+            except Exception as e:
+                logger.log_error(
+                    error_type=type(e).__name__,
+                    error_message=str(e),
+                    stage="main_processing"
+                )
+                raise
+            finally:
+                # Save log file
+                log_filepath = logger.save_run()
+                if log_filepath:
+                    st.session_state.last_log_file = log_filepath
         
         # Display results
         display_results(response, processed)
