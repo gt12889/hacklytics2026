@@ -19,7 +19,9 @@ import uvicorn
 # Ensure project root is on sys.path so module imports work
 sys.path.insert(0, os.path.dirname(__file__))
 
-from query_processor import QueryProcessor
+from itertools import combinations
+
+from query_processor import QueryProcessor, DRUG_DICTIONARY
 from search_engines import V1KeywordSearch, V2TFIDFSearch, V3VectorSearch
 from results_ranker import ResultsRanker
 from response_generator import ResponseGenerator
@@ -397,6 +399,143 @@ def _sphinx_context(
                 demo_risk.append(entry)
             result["demographicRisk"] = demo_risk
 
+    # ── Drug Co-occurrence Heatmap (scoped to drug pair) ─────────────────
+    if df is not None and len(drugs) >= 2:
+        try:
+            matched = _filter_to_drug_pair(df, drugs)
+            if not matched.empty:
+                matched = _compute_severity_score(matched)
+                exploded = matched[["drugs", "severity_score"]].explode("drugs").dropna(subset=["drugs"])
+                exploded["drugs"] = exploded["drugs"].str.lower().str.strip()
+                top_drugs = exploded["drugs"].value_counts().head(20).index.tolist()
+                exploded = exploded[exploded["drugs"].isin(top_drugs)]
+
+                pairs = []
+                for idx, grp in exploded.groupby(level=0):
+                    drug_list = grp["drugs"].unique().tolist()
+                    sev = grp["severity_score"].iloc[0]
+                    for a, b in combinations(sorted(drug_list), 2):
+                        pairs.append((a, b, sev))
+
+                if pairs:
+                    pair_df = pd.DataFrame(pairs, columns=["drug_a", "drug_b", "severity"])
+                    hm_agg = pair_df.groupby(["drug_a", "drug_b"]).agg(
+                        count=("severity", "size"),
+                        mean_severity=("severity", "mean"),
+                    ).reset_index()
+                    all_drugs = sorted(set(hm_agg["drug_a"]) | set(hm_agg["drug_b"]))
+                    n = len(all_drugs)
+                    matrix = [[None] * n for _ in range(n)]
+                    drug_idx = {d: i for i, d in enumerate(all_drugs)}
+                    for _, row in hm_agg.iterrows():
+                        i, j = drug_idx[row["drug_a"]], drug_idx[row["drug_b"]]
+                        val = round(float(row["mean_severity"]), 2)
+                        matrix[i][j] = val
+                        matrix[j][i] = val
+                    result["heatmap"] = {"drugs": [d.title() for d in all_drugs], "matrix": matrix}
+        except Exception as e:
+            print(f"[RxGuard] Per-query heatmap error: {e}")
+
+    # Heatmap fallback from ranked_results
+    if "heatmap" not in result and ranked_results:
+        try:
+            from collections import Counter
+            drug_counter = Counter()
+            case_drugs_list = []
+            for case, _ in ranked_results:
+                dlist = [d.lower() for d in case.drugs]
+                case_drugs_list.append((dlist, getattr(case, "outcome_severity", "non-serious")))
+                for d in dlist:
+                    drug_counter[d] += 1
+            top_drugs = [d for d, _ in drug_counter.most_common(20)]
+            sev_map = {"death": 4, "serious": 3, "hospitalization": 2, "non-serious": 0}
+            pair_sev = {}
+            for dlist, outcome in case_drugs_list:
+                sev = sev_map.get(outcome, 0)
+                for a, b in combinations(sorted(set(dlist) & set(top_drugs)), 2):
+                    pair_sev.setdefault((a, b), []).append(sev)
+            if pair_sev:
+                all_drugs = sorted(set(d for pair in pair_sev for d in pair))
+                n = len(all_drugs)
+                matrix = [[None] * n for _ in range(n)]
+                drug_idx = {d: i for i, d in enumerate(all_drugs)}
+                for (a, b), sevs in pair_sev.items():
+                    val = round(sum(sevs) / len(sevs), 2)
+                    i, j = drug_idx[a], drug_idx[b]
+                    matrix[i][j] = val
+                    matrix[j][i] = val
+                result["heatmap"] = {"drugs": [d.title() for d in all_drugs], "matrix": matrix}
+        except Exception as e:
+            print(f"[RxGuard] Heatmap fallback error: {e}")
+
+    # ── Severity by Pair (scoped to drug pair) ───────────────────────────
+    if df is not None and len(drugs) >= 2:
+        try:
+            matched = _filter_to_drug_pair(df, drugs)
+            if not matched.empty:
+                matched = _compute_severity_score(matched)
+                severity_labels = {4: "death", 3: "lifeThreatening", 2: "hospitalization", 0: "other"}
+                drug_sets = matched["drugs"].apply(
+                    lambda lst: set(d.lower().strip() for d in lst)
+                    if isinstance(lst, list) else set()
+                )
+                # Find all unique drug pairs within the filtered cases
+                pair_counts = {}
+                for idx_row, dset in drug_sets.items():
+                    sev_label = severity_labels.get(matched.at[idx_row, "severity_score"], "other")
+                    for a, b in combinations(sorted(dset), 2):
+                        key = (a, b)
+                        if key not in pair_counts:
+                            pair_counts[key] = {"death": 0, "lifeThreatening": 0, "hospitalization": 0, "other": 0}
+                        pair_counts[key][sev_label] += 1
+
+                if pair_counts:
+                    records = []
+                    for (a, b), counts in pair_counts.items():
+                        total = sum(counts.values())
+                        records.append({
+                            "pair": f"{a.title()} + {b.title()}",
+                            "death": counts["death"],
+                            "lifeThreatening": counts["lifeThreatening"],
+                            "hospitalization": counts["hospitalization"],
+                            "other": counts["other"],
+                            "total": total,
+                        })
+                    records.sort(key=lambda r: r["total"], reverse=True)
+                    result["severityByPair"] = records[:15]
+        except Exception as e:
+            print(f"[RxGuard] Per-query severityByPair error: {e}")
+
+    # severityByPair fallback from ranked_results
+    if "severityByPair" not in result and ranked_results:
+        try:
+            sev_map = {"death": "death", "serious": "lifeThreatening", "hospitalization": "hospitalization", "non-serious": "other"}
+            pair_counts = {}
+            for case, _ in ranked_results:
+                sev_label = sev_map.get(case.outcome_severity, "other")
+                dlist = sorted(set(d.lower() for d in case.drugs))
+                for a, b in combinations(dlist, 2):
+                    key = (a, b)
+                    if key not in pair_counts:
+                        pair_counts[key] = {"death": 0, "lifeThreatening": 0, "hospitalization": 0, "other": 0}
+                    pair_counts[key][sev_label] += case.faers_matches
+            if pair_counts:
+                records = []
+                for (a, b), counts in pair_counts.items():
+                    total = sum(counts.values())
+                    records.append({
+                        "pair": f"{a.title()} + {b.title()}",
+                        "death": counts["death"],
+                        "lifeThreatening": counts["lifeThreatening"],
+                        "hospitalization": counts["hospitalization"],
+                        "other": counts["other"],
+                        "total": total,
+                    })
+                records.sort(key=lambda r: r["total"], reverse=True)
+                result["severityByPair"] = records[:15]
+        except Exception as e:
+            print(f"[RxGuard] severityByPair fallback error: {e}")
+
     return result
 
 
@@ -516,6 +655,36 @@ def health():
         "cases_loaded": len(cases),
         "parquet_loaded": faers_df is not None,
     }
+
+
+@app.get("/api/suggestions")
+def suggestions():
+    """Return sorted drug names and example queries for type-ahead UI."""
+    drugs_sorted = sorted(DRUG_DICTIONARY)
+
+    # Build example queries from sample cases, deduplicated by drug pair
+    sample_cases = get_sample_cases()
+    seen_pairs = set()
+    examples = []
+    for case in sample_cases:
+        if len(case.drugs) < 2:
+            continue
+        pair = frozenset(d.lower() for d in case.drugs[:2])
+        if pair in seen_pairs:
+            continue
+        seen_pairs.add(pair)
+        sex_label = "female" if case.sex and case.sex.lower() == "female" else "male"
+        sex_short = "F" if sex_label == "female" else "M"
+        conditions_str = " and ".join(case.conditions) if case.conditions else "chronic conditions"
+        drug1, drug2 = case.drugs[0].title(), case.drugs[1].title()
+        examples.append({
+            "label": f"{case.age}{sex_short} \u00b7 {drug1} + {drug2}",
+            "query": f"{case.age}-year-old {sex_label} with {conditions_str}, currently on {drug1}. Considering adding {drug2}.",
+        })
+        if len(examples) >= 5:
+            break
+
+    return {"drugs": drugs_sorted, "examples": examples}
 
 
 if __name__ == "__main__":
