@@ -265,14 +265,6 @@ export default function RxGuardDashboard() {
                   Drug Interaction Risk Summary
                 </div>
               </div>
-              <div style={{ fontSize: 14, color: "#888", marginTop: 4 }}>
-                {parsed ? [
-                  parsed.age != null ? `${parsed.age} yrs` : null,
-                  parsed.sex === 1 ? "Male" : parsed.sex === 2 ? "Female" : null,
-                  ...(parsed.preexisting_conditions || []),
-                  ...(parsed.prescribed_medications || []),
-                ].filter(Boolean).join(", ") : `${d.query.currentMed} + ${d.query.newPrescription} · ${d.query.conditions}`}
-              </div>
             </div>
             <button style={{
               background: "linear-gradient(135deg, #2A7D6F, #0D3D3A)",
