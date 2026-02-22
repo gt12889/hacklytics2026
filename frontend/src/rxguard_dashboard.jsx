@@ -331,33 +331,6 @@ export default function RxGuardDashboard() {
           <StatCard label="Life-Threatening" value={d.outcomes.lifeThreatening} sub={`${((d.outcomes.lifeThreatening/d.totalReports)*100).toFixed(1)}% of reports`} color="#2A7D6F" icon="⚡" delay={0.4} />
         </div>
 
-        {/* Severity Distribution */}
-        {d.severityBreakdown && d.severityBreakdown.some(s => s.count > 0) && (
-          <div style={{ marginBottom: 28 }}>
-            <SectionCard title="Severity Distribution" subtitle="Risk profile for this drug pair">
-              <ResponsiveContainer width="100%" height={100}>
-                <BarChart
-                  data={[d.severityBreakdown.reduce((acc, s) => ({ ...acc, [s.severity]: s.count }), {})]}
-                  layout="vertical"
-                  margin={{ left: 0, right: 20, top: 8, bottom: 8 }}
-                >
-                  <XAxis type="number" tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} />
-                  <YAxis type="category" dataKey={() => ""} hide />
-                  <Tooltip
-                    contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontSize: 12 }}
-                    formatter={(v, name) => [`${v} reports`, name]}
-                  />
-                  <Bar dataKey="death" stackId="sev" fill="#d32f2f" name="Death" radius={[4, 0, 0, 4]} />
-                  <Bar dataKey="life-threatening" stackId="sev" fill="#ff7f0e" name="Life-Threatening" />
-                  <Bar dataKey="hospitalization" stackId="sev" fill="#1f77b4" name="Hospitalization" />
-                  <Bar dataKey="other" stackId="sev" fill="#aec7e8" name="Other" radius={[0, 4, 4, 0]} />
-                  <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: "#555" }}>{v}</span>} />
-                </BarChart>
-              </ResponsiveContainer>
-            </SectionCard>
-          </div>
-        )}
-
         {/* Clinical Summary */}
         {d.summary && (
           <div style={{ marginBottom: 28 }}>
@@ -426,31 +399,6 @@ export default function RxGuardDashboard() {
           </SectionCard>
         </div>
 
-        {/* Demographic Risk Profile */}
-        {d.demographicRisk && d.demographicRisk.length > 0 && (
-          <div style={{ marginBottom: 28 }}>
-            <SectionCard title="Demographic Risk Profile" subtitle="Mean severity by age group and sex for this drug pair">
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={d.demographicRisk} margin={{ left: 0, right: 20, top: 8, bottom: 8 }}>
-                  <XAxis dataKey="ageGroup" tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} label={{ value: "Mean Severity", angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#aaa" } }} />
-                  <Tooltip
-                    contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontSize: 12 }}
-                    formatter={(v, name, props) => {
-                      const countKey = name + "Count";
-                      const count = props.payload[countKey];
-                      return [`${v.toFixed(2)} (n=${count})`, name.charAt(0).toUpperCase() + name.slice(1)];
-                    }}
-                  />
-                  <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: "#555" }}>{v.charAt(0).toUpperCase() + v.slice(1)}</span>} />
-                  <Bar dataKey="male" fill="#1f77b4" name="male" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="female" fill="#e377c2" name="female" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </SectionCard>
-          </div>
-        )}
-
         {/* Similar Cases Table */}
         <SectionCard title="Most Similar Patient Cases" subtitle="Ranked by semantic similarity to your patient profile">
           <div style={{ overflowX: "auto" }}>
@@ -477,7 +425,7 @@ export default function RxGuardDashboard() {
                       <td style={{ padding: "14px 12px", fontSize: 13, fontWeight: 700, color: "#2A7D6F", fontFamily: "Space Mono, monospace" }}>#{i + 1}</td>
                       <td style={{ padding: "14px 12px", fontSize: 13, color: "#333" }}>{c.age}y · {c.sex}</td>
                       <td style={{ padding: "14px 12px", fontSize: 12, color: "#555", maxWidth: 200 }}>{c.drugs}</td>
-                      <td style={{ padding: "14px 12px", fontSize: 12, color: "#555", maxWidth: 220 }}>{c.reactions}</td>
+                      <td style={{ padding: "14px 12px", fontSize: 12, color: "#555", maxWidth: 360 }}>{c.reactions}</td>
                       <td style={{ padding: "14px 12px" }}><OutcomeBadge type={c.outcomeType} /></td>
                       <td style={{ padding: "14px 12px", minWidth: 140 }}><SimilarityBar value={c.similarity} /></td>
                     </tr>
@@ -499,73 +447,6 @@ export default function RxGuardDashboard() {
             </table>
           </div>
         </SectionCard>
-
-        {/* ── Retrieval Eval Comparison ──────────────────────────────────── */}
-        {d.retrievalEval && d.retrievalEval.engines && (
-          <div style={{ marginTop: 28, marginBottom: 28 }}>
-            <SectionCard
-              title="Retrieval Engine Comparison"
-              subtitle={`Ground truth: ${d.retrievalEval.relevantCount} relevant cases for ${d.retrievalEval.drugPair[0].charAt(0).toUpperCase() + d.retrievalEval.drugPair[0].slice(1)} + ${d.retrievalEval.drugPair[1].charAt(0).toUpperCase() + d.retrievalEval.drugPair[1].slice(1)}`}
-            >
-              {/* Metrics Table */}
-              <div style={{ overflowX: "auto", marginBottom: 24 }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr style={{ borderBottom: "2px solid #f0f0f0" }}>
-                      {["Engine", "P@5", "P@10", "R@5", "R@10", "NDCG@5", "NDCG@10", "MRR"].map(h => (
-                        <th key={h} style={{ padding: "8px 12px", textAlign: h === "Engine" ? "left" : "right", fontSize: 11, color: "#aaa", fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {d.retrievalEval.engines.map(eng => (
-                      <tr key={eng.engine} style={{
-                        borderBottom: "1px solid #f5f5f5",
-                        background: eng.active ? "#f0fdf4" : "white",
-                      }}>
-                        <td style={{ padding: "10px 12px", fontSize: 13, fontWeight: 700, color: "#0D3D3A", fontFamily: "Space Mono, monospace" }}>
-                          {eng.engine}
-                          {eng.active && <span style={{ marginLeft: 8, background: "#22c55e", color: "white", borderRadius: 20, padding: "2px 8px", fontSize: 10, fontWeight: 600, fontFamily: "DM Sans, sans-serif" }}>ACTIVE</span>}
-                        </td>
-                        {["P@5", "P@10", "R@5", "R@10", "NDCG@5", "NDCG@10", "MRR"].map(m => (
-                          <td key={m} style={{ padding: "10px 12px", textAlign: "right", fontSize: 13, fontFamily: "Space Mono, monospace", color: "#333" }}>
-                            {eng.metrics[m] != null ? (eng.metrics[m] * 100).toFixed(1) + "%" : "—"}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Grouped Bar Chart */}
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart
-                  data={["P@5", "R@10", "NDCG@10", "MRR"].map(m => ({
-                    metric: m,
-                    V1: (d.retrievalEval.engines.find(e => e.engine === "V1")?.metrics[m] || 0),
-                    V2: (d.retrievalEval.engines.find(e => e.engine === "V2")?.metrics[m] || 0),
-                    V3: (d.retrievalEval.engines.find(e => e.engine === "V3")?.metrics[m] || 0),
-                    "V3+R": (d.retrievalEval.engines.find(e => e.engine === "V3+R")?.metrics[m] || 0),
-                  }))}
-                  margin={{ left: 0, right: 20, top: 8, bottom: 8 }}
-                >
-                  <XAxis dataKey="metric" tick={{ fontSize: 12, fill: "#555" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} domain={[0, 1]} tickFormatter={v => `${(v * 100).toFixed(0)}%`} />
-                  <Tooltip
-                    contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontSize: 12 }}
-                    formatter={(v, name) => [`${(v * 100).toFixed(1)}%`, name]}
-                  />
-                  <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: "#555" }}>{v}</span>} />
-                  <Bar dataKey="V1" fill="#ef4444" name="V1" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="V2" fill="#f59e0b" name="V2" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="V3" fill="#22c55e" name="V3" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="V3+R" fill="#3b82f6" name="V3+R" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </SectionCard>
-          </div>
-        )}
 
         {/* ── Sphinx EDA Section ─────────────────────────────────────────── */}
         {(d.heatmap || (d.severityByPair && d.severityByPair.length > 0)) && (
@@ -594,9 +475,9 @@ export default function RxGuardDashboard() {
               const severityColor = (val) => {
                 if (val == null) return "#f5f5f5";
                 const t = Math.min(val / 4, 1);
-                const r = Math.round(255 * Math.min(1, t * 2));
-                const g = Math.round(255 * Math.max(0, 1 - t * 1.5));
-                const b = 0;
+                const r = Math.round(232 - 219 * t);
+                const g = Math.round(235 - 174 * t);
+                const b = Math.round(228 - 170 * t);
                 return `rgb(${r},${g},${b})`;
               };
 
@@ -660,7 +541,7 @@ export default function RxGuardDashboard() {
                           <span style={{ fontSize: 10, color: "#888" }}>Low</span>
                           <div style={{
                             width: 120, height: 10, borderRadius: 4,
-                            background: "linear-gradient(to right, rgb(0,255,0), rgb(255,255,0), rgb(255,128,0), rgb(255,0,0))",
+                            background: "linear-gradient(to right, #E8EBE4, #8ECFC0, #2A7D6F, #0D3D3A)",
                           }} />
                           <span style={{ fontSize: 10, color: "#888" }}>High Severity</span>
                         </div>
@@ -688,16 +569,137 @@ export default function RxGuardDashboard() {
                         formatter={(v, name) => [`${v} reports`, name]}
                       />
                       <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: "#555" }}>{v}</span>} />
-                      <Bar dataKey="death" stackId="sev" fill="#d32f2f" name="Death" radius={[0, 0, 0, 0]} />
-                      <Bar dataKey="lifeThreatening" stackId="sev" fill="#ff7f0e" name="Life-Threatening" />
-                      <Bar dataKey="hospitalization" stackId="sev" fill="#1f77b4" name="Hospitalization" />
-                      <Bar dataKey="other" stackId="sev" fill="#aec7e8" name="Other" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="death" stackId="sev" fill="#0D3D3A" name="Death" radius={[0, 0, 0, 0]} />
+                      <Bar dataKey="lifeThreatening" stackId="sev" fill="#1A5C53" name="Life-Threatening" />
+                      <Bar dataKey="hospitalization" stackId="sev" fill="#2A7D6F" name="Hospitalization" />
+                      <Bar dataKey="other" stackId="sev" fill="#c4d9d6" name="Other" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </SectionCard>
               </div>
             )}
           </>
+        )}
+
+        {/* ── Sphinx Stats & Retrieval Eval (below EDA) ─────────────────── */}
+
+        {/* Severity Distribution */}
+        {d.severityBreakdown && d.severityBreakdown.some(s => s.count > 0) && (
+          <div style={{ marginBottom: 28 }}>
+            <SectionCard title="Severity Distribution" subtitle="Risk profile for this drug pair">
+              <ResponsiveContainer width="100%" height={100}>
+                <BarChart
+                  data={[d.severityBreakdown.reduce((acc, s) => ({ ...acc, [s.severity]: s.count }), {})]}
+                  layout="vertical"
+                  margin={{ left: 0, right: 20, top: 8, bottom: 8 }}
+                >
+                  <XAxis type="number" tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey={() => ""} hide />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontSize: 12 }}
+                    formatter={(v, name) => [`${v} reports`, name]}
+                  />
+                  <Bar dataKey="death" stackId="sev" fill="#0D3D3A" name="Death" radius={[4, 0, 0, 4]} />
+                  <Bar dataKey="life-threatening" stackId="sev" fill="#1A5C53" name="Life-Threatening" />
+                  <Bar dataKey="hospitalization" stackId="sev" fill="#2A7D6F" name="Hospitalization" />
+                  <Bar dataKey="other" stackId="sev" fill="#c4d9d6" name="Other" radius={[0, 4, 4, 0]} />
+                  <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: "#555" }}>{v}</span>} />
+                </BarChart>
+              </ResponsiveContainer>
+            </SectionCard>
+          </div>
+        )}
+
+        {/* Demographic Risk Profile */}
+        {d.demographicRisk && d.demographicRisk.length > 0 && (
+          <div style={{ marginBottom: 28 }}>
+            <SectionCard title="Demographic Risk Profile" subtitle="Mean severity by age group and sex for this drug pair">
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={d.demographicRisk} margin={{ left: 0, right: 20, top: 8, bottom: 8 }}>
+                  <XAxis dataKey="ageGroup" tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} label={{ value: "Mean Severity", angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#aaa" } }} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontSize: 12 }}
+                    formatter={(v, name, props) => {
+                      const countKey = name + "Count";
+                      const count = props.payload[countKey];
+                      return [`${v.toFixed(2)} (n=${count})`, name.charAt(0).toUpperCase() + name.slice(1)];
+                    }}
+                  />
+                  <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: "#555" }}>{v.charAt(0).toUpperCase() + v.slice(1)}</span>} />
+                  <Bar dataKey="male" fill="#2A7D6F" name="male" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="female" fill="#6BB5A8" name="female" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </SectionCard>
+          </div>
+        )}
+
+        {/* Retrieval Eval Comparison */}
+        {d.retrievalEval && d.retrievalEval.engines && (
+          <div style={{ marginTop: 28, marginBottom: 28 }}>
+            <SectionCard
+              title="Retrieval Engine Comparison"
+              subtitle={`Ground truth: ${d.retrievalEval.relevantCount} relevant cases for ${d.retrievalEval.drugPair[0].charAt(0).toUpperCase() + d.retrievalEval.drugPair[0].slice(1)} + ${d.retrievalEval.drugPair[1].charAt(0).toUpperCase() + d.retrievalEval.drugPair[1].slice(1)}`}
+            >
+              {/* Metrics Table */}
+              <div style={{ overflowX: "auto", marginBottom: 24 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "2px solid #f0f0f0" }}>
+                      {["Engine", "P@5", "P@10", "R@5", "R@10", "NDCG@5", "NDCG@10", "MRR"].map(h => (
+                        <th key={h} style={{ padding: "8px 12px", textAlign: h === "Engine" ? "left" : "right", fontSize: 11, color: "#aaa", fontWeight: 600, letterSpacing: 0.5, textTransform: "uppercase" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {d.retrievalEval.engines.map(eng => (
+                      <tr key={eng.engine} style={{
+                        borderBottom: "1px solid #f5f5f5",
+                        background: eng.active ? "#eaf3f1" : "white",
+                      }}>
+                        <td style={{ padding: "10px 12px", fontSize: 13, fontWeight: 700, color: "#0D3D3A", fontFamily: "Space Mono, monospace" }}>
+                          {eng.engine}
+                          {eng.active && <span style={{ marginLeft: 8, background: "#2A7D6F", color: "white", borderRadius: 20, padding: "2px 8px", fontSize: 10, fontWeight: 600, fontFamily: "DM Sans, sans-serif" }}>ACTIVE</span>}
+                        </td>
+                        {["P@5", "P@10", "R@5", "R@10", "NDCG@5", "NDCG@10", "MRR"].map(m => (
+                          <td key={m} style={{ padding: "10px 12px", textAlign: "right", fontSize: 13, fontFamily: "Space Mono, monospace", color: "#333" }}>
+                            {eng.metrics[m] != null ? (eng.metrics[m] * 100).toFixed(1) + "%" : "—"}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Grouped Bar Chart */}
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart
+                  data={["P@5", "R@10", "NDCG@10", "MRR"].map(m => ({
+                    metric: m,
+                    V1: (d.retrievalEval.engines.find(e => e.engine === "V1")?.metrics[m] || 0),
+                    V2: (d.retrievalEval.engines.find(e => e.engine === "V2")?.metrics[m] || 0),
+                    V3: (d.retrievalEval.engines.find(e => e.engine === "V3")?.metrics[m] || 0),
+                    "V3+R": (d.retrievalEval.engines.find(e => e.engine === "V3+R")?.metrics[m] || 0),
+                  }))}
+                  margin={{ left: 0, right: 20, top: 8, bottom: 8 }}
+                >
+                  <XAxis dataKey="metric" tick={{ fontSize: 12, fill: "#555" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "#aaa" }} axisLine={false} tickLine={false} domain={[0, 1]} tickFormatter={v => `${(v * 100).toFixed(0)}%`} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", fontSize: 12 }}
+                    formatter={(v, name) => [`${(v * 100).toFixed(1)}%`, name]}
+                  />
+                  <Legend iconType="circle" iconSize={8} formatter={(v) => <span style={{ fontSize: 11, color: "#555" }}>{v}</span>} />
+                  <Bar dataKey="V1" fill="#0D3D3A" name="V1" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="V2" fill="#1A5C53" name="V2" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="V3" fill="#2A7D6F" name="V3" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="V3+R" fill="#8ECFC0" name="V3+R" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </SectionCard>
+          </div>
         )}
 
       </div>
