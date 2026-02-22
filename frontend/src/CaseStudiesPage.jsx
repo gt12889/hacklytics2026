@@ -312,27 +312,16 @@ export default function CaseStudiesPage() {
             Pharmacovigilance Case Studies
           </div>
           <h1 style={{
-            fontFamily: "Space Mono, monospace",
+            fontFamily: "DM Sans, sans-serif",
             fontSize: 56,
             fontWeight: 700,
-            letterSpacing: 4,
-            textTransform: "uppercase",
+            letterSpacing: 0.5,
             color: "white",
             marginBottom: 20,
             lineHeight: 1.1,
           }}>
-            The Missed Signal
-          </h1>
-          <p style={{
-            fontSize: 18,
-            color: "#c4d9d6",
-            fontFamily: "DM Sans, sans-serif",
-            fontWeight: 500,
-            marginBottom: 20,
-            letterSpacing: 0.5,
-          }}>
             What if RxGuard existed years earlier?
-          </p>
+          </h1>
           <p style={{
             fontSize: 15,
             color: "rgba(255,255,255,0.5)",

@@ -238,15 +238,19 @@ export default function AnalysisPage() {
                 <div style={{ overflowX: "auto", paddingTop: 8 }}>
                   <div style={{ display: "inline-block" }}>
                     {/* X-axis labels */}
-                    <div style={{ display: "flex", marginLeft: labelWidth }}>
+                    <div style={{ display: "flex", marginLeft: labelWidth, height: 90 }}>
                       {drugs.map((drug, i) => (
                         <div key={i} style={{
-                          width: cellSize, textAlign: "center", fontSize: 9,
-                          fontWeight: 600, color: "#555",
-                          transform: "rotate(-45deg)", transformOrigin: "center bottom",
-                          whiteSpace: "nowrap", height: 60, display: "flex",
-                          alignItems: "flex-end", justifyContent: "center",
-                        }}>{drug}</div>
+                          width: cellSize, position: "relative", height: "100%",
+                        }}>
+                          <span style={{
+                            position: "absolute", bottom: 0, left: "50%",
+                            fontSize: 9, fontWeight: 600, color: "#555",
+                            whiteSpace: "nowrap",
+                            transform: "rotate(-55deg)",
+                            transformOrigin: "bottom left",
+                          }}>{drug}</span>
+                        </div>
                       ))}
                     </div>
                     {/* Rows */}

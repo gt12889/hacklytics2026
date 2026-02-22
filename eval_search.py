@@ -1,7 +1,7 @@
 """
 V1 / V2 / V3 Search Engine Evaluation Framework
 Runs 20 blueprint test queries through each engine on a shared synthetic corpus
-and computes Precision@K, Recall@K, MRR, and NDCG metrics.
+and computes Precision@K, Recall@K, and NDCG metrics.
 
 Usage:
     python eval_search.py                       # full evaluation, console output
@@ -148,61 +148,85 @@ _PAIR_DESCRIPTIONS: Dict[Tuple[str, str], List[str]] = {
         "{age}yo {sex} anticoagulated with warfarin developed GI bleeding after starting ibuprofen 400mg TID. INR rose to {inr}. Hospitalized for observation and blood products.",
         "Patient ({age}{sex_abbr}) on warfarin for DVT prophylaxis. Took OTC ibuprofen for headache. After 5 days noted bruising and dark stools. INR {inr}.",
         "{age}-year-old {sex} with atrial fibrillation on warfarin. Started ibuprofen for back pain. After 2 weeks, developed hematemesis with INR {inr}. Required endoscopy.",
+        "{age}-year-old {sex} with mechanical heart valve on warfarin 5mg daily and stable INR of 2.5. Self-medicated with OTC ibuprofen 600mg TID for knee pain over 2 weeks. Presented to emergency department with coffee-ground emesis, melena, and syncopal episode. INR measured at {inr}. Hemoglobin dropped from 13.2 to 6.8 g/dL requiring ICU admission and 5 units pRBC.",
+        "{age}yo {sex} with prosthetic aortic valve on warfarin 7.5mg daily. Began ibuprofen 800mg TID for shoulder impingement without consulting physician. After 10 days developed gross hematuria and INR of {inr}. CT abdomen revealed retroperitoneal hematoma. Emergent vitamin K and FFP administered. Required IR-guided drainage.",
     ],
     ("methotrexate", "naproxen"): [
         "{age}-year-old {sex} with rheumatoid arthritis on methotrexate took naproxen for joint flare. Developed pancytopenia and acute kidney injury. Creatinine {cr}.",
         "Patient ({age}{sex_abbr}) on weekly methotrexate. Started naproxen 500mg BID. After 10 days presented with renal failure and bone marrow suppression.",
         "{age}yo {sex} with RA on methotrexate. Naproxen added for pain. Developed mucositis, leukopenia, and creatinine rise to {cr}.",
+        "{age}-year-old {sex} with RA on methotrexate 15mg weekly subcutaneous. Prescribed naproxen 500mg BID for joint flare. After 12 days presented with oral ulcerations, WBC 1.1, platelets 32k, and creatinine {cr}. Naproxen impaired renal clearance of methotrexate causing toxic accumulation. Required IV leucovorin rescue and G-CSF.",
+        "{age}yo {sex} with psoriatic arthritis on methotrexate 20mg weekly. Self-started OTC naproxen 220mg TID for back pain. After 3 weeks developed severe pancytopenia with neutrophilic fever. Creatinine {cr}. Bone marrow biopsy showed hypoplasia consistent with methotrexate toxicity. Hospitalized 14 days.",
     ],
     ("lithium", "lisinopril"): [
         "{age}-year-old {sex} on lithium for bipolar disorder started lisinopril for hypertension. Lithium level rose from 0.8 to {li_level} mEq/L. Developed tremor and confusion.",
         "Patient ({age}{sex_abbr}) on lithium. ACE inhibitor lisinopril added. Within 2 weeks, lithium toxicity: level {li_level}, tremor, ataxia, nausea.",
         "{age}yo {sex} bipolar patient on lithium. Lisinopril initiated. Presented with lithium level {li_level}, coarse tremor, and renal impairment.",
+        "{age}-year-old {sex} stable on lithium 900mg daily (level 0.9 mEq/L) for bipolar I. Cardiologist started lisinopril 20mg for newly diagnosed hypertension. At 2-week follow-up lithium level {li_level} mEq/L with coarse tremor, slurred speech, and polyuria. ACE inhibitor reduced GFR leading to lithium retention. Required IV saline diuresis.",
+        "{age}yo {sex} with bipolar disorder on lithium 1200mg daily. Lisinopril 10mg added by PCP. Presented 10 days later with confusion, ataxia, and nystagmus. Lithium level {li_level} mEq/L. Creatinine rose from 1.0 to 2.3. Nephrology consulted for possible lithium nephrotoxicity compounded by ACE inhibitor renal effects.",
     ],
     ("fluoxetine", "tramadol"): [
         "{age}-year-old {sex} on fluoxetine for depression prescribed tramadol for pain. Developed serotonin syndrome: hyperthermia, clonus, agitation.",
         "Patient ({age}{sex_abbr}) taking fluoxetine 40mg. Added tramadol 50mg. Within 24 hours developed serotonin syndrome with fever, tremor, and diaphoresis.",
         "{age}yo {sex} on fluoxetine. Tramadol prescribed for fibromyalgia. Presented to ER with serotonin syndrome: rigidity, hyperthermia {temp}°F, myoclonus.",
+        "{age}-year-old {sex} on fluoxetine 40mg for MDD for 2 years. Orthopedist prescribed tramadol 50mg Q6H after knee arthroscopy without checking medication list. Within 18 hours developed agitation, bilateral lower extremity clonus, diaphoresis, and temperature {temp}°F. Diagnosed with serotonin syndrome per Hunter criteria. Treated with cyproheptadine 12mg loading.",
+        "{age}yo {sex} taking fluoxetine 20mg for GAD. Urgent care prescribed tramadol 100mg for acute lumbar strain. Returned to ER 6 hours later with tremor, hyperreflexia, diarrhea, and temperature {temp}°F. Mild serotonin toxicity. Tramadol discontinued. Monitored 24 hours. Discharged with NSAID alternative for pain management.",
     ],
     ("simvastatin", "clarithromycin"): [
         "{age}-year-old {sex} on simvastatin 80mg started clarithromycin for sinusitis. Developed rhabdomyolysis with CK {ck}. Dark urine and muscle pain.",
         "Patient ({age}{sex_abbr}) on simvastatin. Prescribed clarithromycin for pneumonia. CK rose to {ck}. Acute kidney injury secondary to rhabdomyolysis.",
         "{age}yo {sex} taking simvastatin. Clarithromycin added for bronchitis. Developed severe myalgia, CK {ck}, myoglobinuria.",
+        "{age}-year-old {sex} on simvastatin 80mg daily for familial hypercholesterolemia. Prescribed clarithromycin 500mg BID for H. pylori triple therapy. Day 4 developed severe bilateral thigh pain, inability to ambulate, and dark brown urine. CK {ck}. Creatinine 3.2. CYP3A4 inhibition by clarithromycin caused toxic statin accumulation. Required 5 days IV hydration.",
+        "{age}yo {sex} on simvastatin 40mg. Started clarithromycin for atypical pneumonia. After 6 days developed diffuse muscle weakness progressing to inability to rise from chair. CK {ck}. Myoglobinuria confirmed. Both medications held. Switched to azithromycin for infection and rosuvastatin for lipid management to avoid future CYP3A4 interaction.",
     ],
     ("metformin", "ciprofloxacin"): [
         "{age}-year-old {sex} diabetic on metformin started ciprofloxacin for UTI. Blood glucose dropped to {glucose} mg/dL. Symptomatic hypoglycemia.",
         "Patient ({age}{sex_abbr}) on metformin 1000mg BID. Ciprofloxacin prescribed. Experienced blood sugar fluctuations, glucose as low as {glucose} mg/dL.",
         "{age}yo {sex} with type 2 diabetes on metformin. Started cipro for infection. Glucose dysregulation with readings of {glucose} mg/dL.",
+        "{age}-year-old {sex} with T2DM on metformin 1000mg BID and well-controlled A1c 6.8%. Started ciprofloxacin 500mg BID for complicated UTI. Day 3 EMS called for altered mental status. Fingerstick glucose {glucose} mg/dL. Required D50 push and dextrose drip. Fluoroquinolone-mediated insulin secretagogue effect combined with metformin's glucose-lowering identified as cause.",
+        "{age}yo {sex} diabetic on metformin 850mg BID. Ciprofloxacin 750mg BID prescribed for diverticulitis. Experienced recurrent symptomatic hypoglycemia with glucose readings {glucose}-65 mg/dL over 5 days. Required reduced metformin dose during antibiotic course and increased home glucose monitoring frequency to QID.",
     ],
     ("phenelzine", "fluoxetine"): [
         "{age}-year-old {sex} on phenelzine switched to fluoxetine without adequate washout. Developed hypertensive crisis with BP {bp}. Serotonin syndrome.",
         "Patient ({age}{sex_abbr}) taking MAO inhibitor phenelzine. Fluoxetine started prematurely. BP {bp}, hyperthermia, rigidity. ICU admission.",
         "{age}yo {sex} on phenelzine for depression. Fluoxetine added. Hypertensive emergency BP {bp}, serotonin syndrome requiring ICU care.",
+        "{age}-year-old {sex} on phenelzine 60mg daily for atypical depression. New provider unaware of MAO inhibitor prescribed fluoxetine 20mg. Within 8 hours developed severe occipital headache, BP {bp}, diaphoresis, and generalized rigidity. Diagnosed with hypertensive crisis and serotonin syndrome. Required IV nitroprusside, dantrolene, and ICU monitoring for 72 hours.",
+        "{age}yo {sex} discontinued phenelzine and began fluoxetine after only 5-day washout (14 days recommended). Presented day 2 with BP {bp}, temperature 104F, myoclonus, and agitation. Classic MAO inhibitor-SSRI serotonergic crisis. Treated with cyproheptadine, cooling blankets, and benzodiazepines. Discharged after 6-day hospitalization.",
     ],
     ("spironolactone", "lisinopril"): [
         "{age}-year-old {sex} on spironolactone for heart failure started lisinopril. Potassium rose to {k} mEq/L. ECG showed peaked T-waves.",
         "Patient ({age}{sex_abbr}) on spironolactone 25mg and lisinopril 10mg. Hyperkalemia with K+ {k}. Required calcium gluconate and insulin/glucose.",
         "{age}yo {sex} with CHF on spironolactone. Lisinopril added. Potassium {k} mEq/L, bradycardia, near-fatal arrhythmia.",
+        "{age}-year-old {sex} with NYHA class III heart failure on spironolactone 50mg daily. Lisinopril 20mg added for afterload reduction. Routine labs at 1 week showed K+ {k} mEq/L. ECG revealed peaked T-waves, widened QRS. Both K+-sparing diuretic and ACE inhibitor reduce potassium excretion synergistically. Required IV calcium gluconate and insulin-glucose.",
+        "{age}yo {sex} with resistant hypertension on lisinopril 40mg. Spironolactone 25mg added as fourth-line agent. At 2-week follow-up K+ {k} mEq/L with new bradycardia HR 48. Dual RAAS blockade with aldosterone antagonist identified as cause. Spironolactone dose reduced. Potassium-restricted diet counseled.",
     ],
     ("digoxin", "amiodarone"): [
         "{age}-year-old {sex} on digoxin for atrial fibrillation started amiodarone. Digoxin level rose to {dig} ng/mL. Nausea, visual disturbance, bradycardia.",
         "Patient ({age}{sex_abbr}) on digoxin. Amiodarone added for arrhythmia control. Digoxin toxicity: level {dig}, heart rate 38, nausea.",
         "{age}yo {sex} on digoxin and started amiodarone. Dig level {dig} ng/mL. Required dose reduction and monitoring.",
+        "{age}-year-old {sex} with AFib on digoxin 0.25mg daily (level 1.2 ng/mL). Amiodarone 400mg BID loading started for rhythm control. Day 5 developed nausea, yellow-green visual halos, and HR 32. Digoxin level {dig} ng/mL. Amiodarone inhibits P-glycoprotein and CYP3A4 reducing digoxin clearance by 50%. Digoxin held and dose halved to 0.125mg.",
+        "{age}yo {sex} on chronic digoxin 0.125mg and newly initiated amiodarone 200mg daily. Presented 3 weeks later with anorexia, fatigue, and new bidirectional ventricular tachycardia. Digoxin level {dig} ng/mL. Pathognomonic arrhythmia for digoxin toxicity. DigiFab administered. Amiodarone-digoxin interaction counseling provided.",
     ],
     ("ciprofloxacin", "prednisone"): [
         "{age}-year-old {sex} on ciprofloxacin for UTI and prednisone for COPD exacerbation. Developed Achilles tendon rupture after {days} days.",
         "Patient ({age}{sex_abbr}) prescribed ciprofloxacin and prednisone concurrently. Tendon pain progressed to complete Achilles rupture.",
         "{age}yo {sex} on cipro and prednisone. After {days} days developed bilateral Achilles tendinopathy. MRI confirmed partial tear.",
+        "{age}-year-old {sex} on chronic prednisone 15mg for polymyalgia rheumatica. Prescribed ciprofloxacin 500mg BID for complicated UTI. Day {days} felt sudden pop in left Achilles while climbing stairs. MRI confirmed complete tendon rupture. Required surgical repair with 12-week recovery. Fluoroquinolone-corticosteroid synergistic tendon toxicity documented.",
+        "{age}yo {sex} on prednisone 40mg taper for COPD exacerbation. Ciprofloxacin 750mg BID added for concurrent pneumonia. Developed bilateral ankle pain and swelling day {days}. MRI showed Achilles tendinosis with partial tear right side. Both medications stopped. Conservative management with immobilization. Full recovery 8 weeks.",
     ],
     ("atorvastatin", "clarithromycin"): [
         "{age}-year-old {sex} on atorvastatin developed severe myopathy after starting clarithromycin. CK {ck}. Muscle weakness and dark urine.",
         "Patient ({age}{sex_abbr}) taking atorvastatin 40mg. Clarithromycin for URI led to rhabdomyolysis, CK {ck}, acute renal injury.",
         "{age}yo {sex} on atorvastatin. Biaxin prescribed. Developed myalgia, CK {ck}, and myoglobinuria requiring IV hydration.",
+        "{age}-year-old {sex} on atorvastatin 80mg daily for familial hyperlipidemia. Prescribed clarithromycin 500mg BID for Helicobacter pylori eradication. Day 5 developed proximal muscle weakness, diffuse myalgias, and coca-cola-colored urine. CK {ck}. Creatinine 2.8. CYP3A4 inhibition by clarithromycin caused atorvastatin accumulation and rhabdomyolysis. Aggressive IV hydration for 6 days.",
+        "{age}yo {sex} taking atorvastatin 40mg daily. Clarithromycin added for community-acquired pneumonia. After 7 days developed muscle tenderness and fatigue. CK {ck}. No myoglobinuria or renal impairment. Atorvastatin held during clarithromycin course. Switched to azithromycin which has no significant CYP3A4 interaction. CK normalized in 2 weeks.",
     ],
     ("metformin", "lisinopril"): [
         "{age}-year-old {sex} diabetic on metformin and lisinopril. Developed acute kidney injury with creatinine {cr}. Metformin held; lactic acidosis concern.",
         "Patient ({age}{sex_abbr}) on metformin 1000mg and lisinopril 20mg. Renal function declined, creatinine {cr}. Required metformin dose adjustment.",
         "{age}yo {sex} with diabetes and hypertension on metformin and lisinopril. Annual labs showed rising creatinine {cr}. Drug interaction counseling provided.",
+        "{age}-year-old {sex} with T2DM on metformin 1000mg BID and lisinopril 40mg for diabetic nephropathy. Developed gastroenteritis with volume depletion. Creatinine rose to {cr} from baseline 1.2. Lactate 5.8 mmol/L concerning for metformin-associated lactic acidosis in setting of ACE-inhibitor-potentiated renal hemodynamic compromise. Required IV bicarbonate and hydration.",
+        "{age}yo {sex} diabetic on metformin 850mg BID and lisinopril 20mg. Routine labs at 6-month visit showed creatinine {cr}, eGFR declined to 38 mL/min from 62. Dual effect of ACE inhibitor on efferent arteriole tone and reduced metformin clearance. Metformin dose halved to 425mg BID. Renal function monitored closely.",
     ],
 }
 
@@ -240,7 +264,7 @@ def _fill_template(template: str, age: int, sex: str) -> str:
 
 
 def build_eval_corpus(seed: int = 42) -> List[FAERSCase]:
-    """Build ~200 synthetic cases covering all 20 query targets."""
+    """Build ~184 synthetic cases covering all 20 query targets."""
     rng = random.Random(seed)
     random.seed(seed)
     cases: List[FAERSCase] = []
@@ -262,8 +286,8 @@ def build_eval_corpus(seed: int = 42) -> List[FAERSCase]:
                 f"{{age}}yo {{sex}} prescribed {d1} and {d2}. Interaction led to adverse outcome.",
             ]
 
-        # ── 4 generic-name cases ───────────────────────────────────────
-        for i in range(4):
+        # ── 6 generic-name cases ───────────────────────────────────────
+        for i in range(6):
             age = rng.randint(45, 85)
             sex = rng.choice(["male", "female"])
             tmpl = templates[i % len(templates)]
@@ -284,10 +308,10 @@ def build_eval_corpus(seed: int = 42) -> List[FAERSCase]:
                 faers_matches=rng.randint(200, 5000),
             ))
 
-        # ── 2 brand-name cases (if brand mappings exist) ───────────────
+        # ── 3 brand-name cases (if brand mappings exist) ───────────────
         brands_d1 = GENERIC_BRAND_MAP.get(d1, [])
         brands_d2 = GENERIC_BRAND_MAP.get(d2, [])
-        for i in range(2):
+        for i in range(3):
             age = rng.randint(45, 85)
             sex = rng.choice(["male", "female"])
             tmpl = templates[i % len(templates)]
@@ -316,8 +340,8 @@ def build_eval_corpus(seed: int = 42) -> List[FAERSCase]:
                 faers_matches=rng.randint(200, 5000),
             ))
 
-        # ── 2 distractor cases (only one drug from pair) ───────────────
-        for i, solo_drug in enumerate([d1, d2]):
+        # ── 3 distractor cases (only one drug from pair) ───────────────
+        for i, solo_drug in enumerate([d1, d2, rng.choice([d1, d2])]):
             age = rng.randint(45, 85)
             sex = rng.choice(["male", "female"])
             filler = rng.choice(_NOISE_DRUGS)
@@ -341,9 +365,9 @@ def build_eval_corpus(seed: int = 42) -> List[FAERSCase]:
                 faers_matches=rng.randint(50, 500),
             ))
 
-    # ── 30 noise cases: random drug combos not matching any target pair ──
+    # ── 40 noise cases: random drug combos not matching any target pair ──
     target_pair_set = set(target_pairs) | {(b, a) for a, b in target_pairs}
-    for _ in range(30):
+    for _ in range(40):
         d1, d2 = rng.sample(_NOISE_DRUGS, 2)
         while (d1, d2) in target_pair_set or (d2, d1) in target_pair_set:
             d1, d2 = rng.sample(_NOISE_DRUGS, 2)
@@ -414,19 +438,14 @@ def mrr(retrieved_ids: List[str], relevant_ids: Set[str]) -> float:
 
 
 def ndcg_at_k(retrieved_ids: List[str], relevant_ids: Set[str], k: int) -> float:
-    """NDCG@K with binary relevance."""
+    """Normalized Discounted Cumulative Gain at K."""
     top_k = retrieved_ids[:k]
-    # DCG
-    dcg = 0.0
-    for i, rid in enumerate(top_k):
-        rel = 1.0 if rid in relevant_ids else 0.0
-        dcg += rel / math.log2(i + 2)  # i+2 because i is 0-indexed
-    # IDCG: best possible ordering
-    n_rel_in_k = min(len(relevant_ids), k)
-    idcg = sum(1.0 / math.log2(i + 2) for i in range(n_rel_in_k))
-    if idcg == 0:
-        return 0.0
-    return dcg / idcg
+    dcg = sum(
+        (1.0 if rid in relevant_ids else 0.0) / math.log2(i + 2)
+        for i, rid in enumerate(top_k)
+    )
+    ideal = sum(1.0 / math.log2(i + 2) for i in range(min(k, len(relevant_ids))))
+    return dcg / ideal if ideal > 0 else 0.0
 
 
 def compute_metrics(
@@ -581,7 +600,7 @@ def _fmt(val: float) -> str:
 def print_summary_table(results: List[QueryResult]) -> None:
     """Print mean metrics per engine."""
     engines = ["V1", "V2", "V3", "V3+R"]
-    metric_names = ["P@5", "P@10", "R@10", "MRR", "NDCG@10"]
+    metric_names = ["P@5", "P@10", "R@10", "NDCG@10", "MRR"]
 
     print("=" * 72)
     print("SUMMARY — Mean metrics across all 20 queries")
@@ -660,7 +679,7 @@ def print_per_query_detail(results: List[QueryResult]) -> None:
 
 def save_csv(results: List[QueryResult], path: str) -> None:
     """Save per-query results to CSV."""
-    metric_names = ["P@5", "P@10", "R@10", "MRR", "NDCG@10"]
+    metric_names = ["P@5", "P@10", "R@10", "NDCG@10", "MRR"]
     with open(path, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(
@@ -684,7 +703,7 @@ def generate_plot(results: List[QueryResult], path: str = "/tmp/eval_comparison.
         return
 
     engines = ["V1", "V2", "V3", "V3+R"]
-    metric_names = ["P@5", "P@10", "R@10", "MRR", "NDCG@10"]
+    metric_names = ["P@5", "P@10", "R@10", "NDCG@10", "MRR"]
     colors = {"V1": "#ef4444", "V2": "#f59e0b", "V3": "#22c55e", "V3+R": "#3b82f6"}
 
     fig = go.Figure()

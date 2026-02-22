@@ -1,6 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Autoplay, Pagination, EffectCoverflow, Navigation } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/pagination";
+import "swiper/css/effect-coverflow";
+import "swiper/css/navigation";
 
 // ── Scroll Reveal Hook ───────────────────────────────────────────────────────
 function useScrollReveal() {
@@ -32,17 +38,23 @@ const PIPELINE_NODES = [
 
 // ── Engine Data ──────────────────────────────────────────────────────────────
 const ENGINES = [
-  { name: "V1", subtitle: "Keyword Match", desc: "Exact drug name lookup", color: "#0D3D3A", ndcg: 0.52 },
-  { name: "V2", subtitle: "TF-IDF", desc: "Term frequency + cosine similarity", color: "#1A5C53", ndcg: 0.64 },
-  { name: "V3", subtitle: "Vector Search", desc: "Semantic embedding similarity", color: "#2A7D6F", ndcg: 0.82 },
+  { name: "V1", subtitle: "Keyword Match", desc: "Exact drug name lookup", color: "#0D3D3A", mrr: 0.72 },
+  { name: "V2", subtitle: "TF-IDF", desc: "Term frequency + cosine similarity", color: "#1A5C53", mrr: 0.81 },
+  { name: "V3", subtitle: "Vector Search", desc: "Semantic embedding similarity", color: "#2A7D6F", mrr: 0.94 },
 ];
 
 // ── Chart Data ───────────────────────────────────────────────────────────────
 const METRIC_DATA = [
   { metric: "P@5", V1: 0.60, V2: 0.72, V3: 0.88 },
   { metric: "R@10", V1: 0.40, V2: 0.55, V3: 0.75 },
-  { metric: "NDCG@10", V1: 0.52, V2: 0.64, V3: 0.82 },
   { metric: "MRR", V1: 0.72, V2: 0.81, V3: 0.94 },
+];
+
+// ── Case Study Previews ──────────────────────────────────────────────────────
+const CASE_PREVIEWS = [
+  { name: "Vioxx", generic: "Rofecoxib", class: "COX-2 Inhibitor", years: "1999 → 2004", impact: "88,000–140,000 excess heart attacks", color: "#D4B896" },
+  { name: "Baycol", generic: "Cerivastatin", class: "Statin", years: "1997 → 2001", impact: "52 deaths worldwide", color: "#C9B99A" },
+  { name: "Darvocet", generic: "Propoxyphene", class: "Opioid Analgesic", years: "1957 → 2010", impact: "Deaths dropped 84% after withdrawal", color: "#DECCA8" },
 ];
 
 // ── Tech Stack Items ─────────────────────────────────────────────────────────
@@ -66,6 +78,7 @@ export default function LandingPage() {
   const [problemRef, problemVisible] = useScrollReveal();
   const [archRef, archVisible] = useScrollReveal();
   const [metricsRef, metricsVisible] = useScrollReveal();
+  const [caseRef, caseVisible] = useScrollReveal();
   const [techRef, techVisible] = useScrollReveal();
   const [ctaRef, ctaVisible] = useScrollReveal();
 
@@ -106,11 +119,11 @@ export default function LandingPage() {
 
   // Architecture diagram helpers
   const nodeStyle = (id) => ({
-    border: activeNode === id ? "2px solid #2A7D6F" : "2px solid #c4d9d6",
-    borderRadius: 12,
-    padding: "14px 22px",
+    border: activeNode === id ? "3px solid #2A7D6F" : "3px solid #c4d9d6",
+    borderRadius: 16,
+    padding: "21px 33px",
     fontFamily: "Space Mono, monospace",
-    fontSize: 12,
+    fontSize: 18,
     color: activeNode === id ? "white" : "rgba(255,255,255,0.85)",
     cursor: "pointer",
     textAlign: "center",
@@ -123,7 +136,7 @@ export default function LandingPage() {
 
   const arrowStyle = {
     color: "#c4d9d6",
-    fontSize: 20,
+    fontSize: 60,
     fontWeight: 400,
     display: "flex",
     alignItems: "center",
@@ -144,20 +157,20 @@ export default function LandingPage() {
           {node.label}
         </div>
         <div style={{
-          maxHeight: activeNode === node.id ? 140 : 0,
+          maxHeight: activeNode === node.id ? 180 : 0,
           overflow: "hidden",
           transition: "max-height 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease",
           opacity: activeNode === node.id ? 1 : 0,
         }}>
           <div style={{
-            marginTop: 12,
+            marginTop: 14,
             borderLeft: "3px solid #2A7D6F",
-            paddingLeft: 12,
-            fontSize: 12,
+            paddingLeft: 14,
+            fontSize: 14,
             color: "rgba(255,255,255,0.6)",
             fontFamily: "DM Sans, sans-serif",
             lineHeight: 1.7,
-            maxWidth: 220,
+            maxWidth: 260,
           }}>
             {node.detail}
           </div>
@@ -167,7 +180,7 @@ export default function LandingPage() {
   }
 
   return (
-    <div style={{ fontFamily: "DM Sans, sans-serif", overflowX: "hidden", background: "#E8EBE4" }}>
+    <div style={{ fontFamily: "DM Sans, sans-serif", overflowX: "clip", background: "#E8EBE4" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
         @keyframes slideUp {
@@ -178,128 +191,160 @@ export default function LandingPage() {
           from { opacity: 0; }
           to { opacity: 1; }
         }
-        @keyframes pulse {
-          0%, 100% { opacity: 0.4; }
-          50% { opacity: 0.8; }
+        @keyframes bounce {
+          0%, 100% { transform: translateX(-50%) translateY(0); }
+          50% { transform: translateX(-50%) translateY(12px); }
         }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #E8EBE4; }
         ::-webkit-scrollbar-thumb { background: #c4d9d6; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #2A7D6F; }
+        .swiper-pagination-bullet { background: #c4d9d6; opacity: 0.4; }
+        .swiper-pagination-bullet-active { background: #2A7D6F; opacity: 1; }
+        .swiper-button-prev, .swiper-button-next { color: #2A7D6F; }
+        .swiper-button-prev::after, .swiper-button-next::after { font-size: 20px; }
+        .swiper { touch-action: auto !important; }
       `}</style>
 
       {/* ════════════════════════════════════════════════════════════════════
           Section 1: Hero
       ════════════════════════════════════════════════════════════════════ */}
       <section style={{
-        minHeight: "100vh",
-        background: "linear-gradient(180deg, #0D3D3A 0%, #164a46 100%)",
+        height: "100vh",
+        maxHeight: "100vh",
+        boxSizing: "border-box",
+        background: "linear-gradient(90deg, #E8EBE4 0%, #E8EBE4 50%, #0D3D3A 50%, #0D3D3A 100%)",
         display: "flex",
-        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        padding: "80px 48px",
-        textAlign: "center",
+        padding: "40px 48px 60px 48px",
         position: "relative",
+        overflow: "clip",
       }}>
-        <div style={{ animation: "slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both", position: "relative", zIndex: 1 }}>
-          <div style={{
-            fontSize: 12,
-            color: "#c4d9d6",
-            fontFamily: "Space Mono, monospace",
-            letterSpacing: 4,
-            textTransform: "uppercase",
-            marginBottom: 24,
-            animation: "fadeIn 1s ease 0.3s both",
-          }}>
-            Hacklytics 2026
-          </div>
-          <h1 style={{
-            fontFamily: "Space Mono, monospace",
-            fontSize: 72,
-            fontWeight: 700,
-            letterSpacing: 8,
-            textTransform: "uppercase",
-            color: "white",
-            marginBottom: 20,
-            lineHeight: 1.1,
-          }}>
-            RXGUARD
-          </h1>
-          <p style={{
-            fontSize: 18,
-            color: "#c4d9d6",
-            fontFamily: "DM Sans, sans-serif",
-            fontWeight: 500,
-            marginBottom: 20,
-            letterSpacing: 1,
-          }}>
-            Semantic Drug Interaction Intelligence
-          </p>
-          <p style={{
-            fontSize: 15,
-            color: "rgba(255,255,255,0.55)",
-            maxWidth: 560,
-            margin: "0 auto 56px",
-            lineHeight: 1.8,
-          }}>
-            Searching 20M+ FDA adverse event reports with vector embeddings to catch interactions keyword checkers miss.
-          </p>
-        </div>
-
-        <div style={{ animation: "slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both", display: "flex", gap: 16, position: "relative", zIndex: 1 }}>
-          <button
-            onClick={() => navigate("/home")}
-            style={ctaButtonStyle}
-            onMouseOver={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 30px rgba(42,125,111,0.5)"; }}
-            onMouseOut={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(42,125,111,0.35)"; }}
-          >
-            Try the Live Demo
-          </button>
-          <button
-            onClick={() => {
-              document.getElementById("problem-section")?.scrollIntoView({ behavior: "smooth" });
-            }}
-            style={ctaSecondaryStyle}
-            onMouseOver={e => { e.currentTarget.style.borderColor = "#c4d9d6"; e.currentTarget.style.color = "white"; }}
-            onMouseOut={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)"; e.currentTarget.style.color = "rgba(255,255,255,0.8)"; }}
-          >
-            Learn More
-          </button>
-          <button
-            onClick={() => navigate("/case-studies")}
-            style={ctaSecondaryStyle}
-            onMouseOver={e => { e.currentTarget.style.borderColor = "#c4d9d6"; e.currentTarget.style.color = "white"; }}
-            onMouseOut={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)"; e.currentTarget.style.color = "rgba(255,255,255,0.8)"; }}
-          >
-            Case Studies
-          </button>
-        </div>
-
-        {/* Scroll indicator */}
+        {/* Two-column layout: text left, video right */}
         <div style={{
-          position: "absolute",
-          bottom: 32,
-          left: "50%",
-          transform: "translateX(-50%)",
-          animation: "pulse 2s ease-in-out infinite",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: "100%",
+          gap: 48,
+          position: "relative",
+          zIndex: 1,
         }}>
+          {/* Left column — text + CTAs */}
+          <div style={{ flex: "1 1 50%", minWidth: 0 }}>
+            <div style={{ animation: "slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both" }}>
+              <div style={{
+                fontSize: 14,
+                color: "#2A7D6F",
+                fontFamily: "Space Mono, monospace",
+                letterSpacing: 4,
+                textTransform: "uppercase",
+                marginBottom: 24,
+                animation: "fadeIn 1s ease 0.3s both",
+              }}>
+                Hacklytics 2026
+              </div>
+              <h1 style={{
+                fontFamily: "Space Mono, monospace",
+                fontSize: 77,
+                fontWeight: 700,
+                letterSpacing: 8,
+                textTransform: "uppercase",
+                color: "#0D3D3A",
+                marginBottom: 20,
+                lineHeight: 1.1,
+              }}>
+                RXGUARD
+              </h1>
+              <p style={{
+                fontSize: 22,
+                color: "#1A5C53",
+                fontFamily: "DM Sans, sans-serif",
+                fontWeight: 500,
+                marginBottom: 20,
+                letterSpacing: 1,
+              }}>
+                Semantic Drug Interaction Intelligence
+              </p>
+              <p style={{
+                fontSize: 18,
+                color: "rgba(13,61,58,0.55)",
+                maxWidth: 480,
+                marginBottom: 48,
+                lineHeight: 1.8,
+              }}>
+                Searching 20M+ FDA adverse event reports with vector embeddings to catch interactions keyword checkers miss.
+              </p>
+            </div>
+
+            <div style={{ animation: "slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both" }}>
+              <button
+                onClick={() => navigate("/home")}
+                style={ctaButtonStyle}
+                onMouseOver={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 30px rgba(42,125,111,0.5)"; }}
+                onMouseOut={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(42,125,111,0.35)"; }}
+              >
+                Try the Live Demo
+              </button>
+            </div>
+          </div>
+
+          {/* Right column — video */}
+          <div style={{ flex: "1 1 50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div style={{
-            width: 24,
-            height: 40,
-            borderRadius: 12,
-            border: "1.5px solid rgba(255,255,255,0.2)",
-            display: "flex",
-            justifyContent: "center",
-            paddingTop: 8,
+            width: "min(572px, 46vw)",
+            height: "min(572px, 46vw)",
+            borderRadius: 24,
+            background: "transparent",
+            border: "3px solid rgba(255,255,255,0.25)",
+            padding: 50,
+            animation: "fadeIn 1.2s ease 0.4s both",
+            opacity: 0.4,
           }}>
             <div style={{
-              width: 3,
-              height: 8,
-              borderRadius: 2,
-              background: "#c4d9d6",
-            }} />
+              width: "100%",
+              height: "100%",
+              borderRadius: 12,
+              overflow: "hidden",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}>
+              <video
+                src="/hero_bg.mp4"
+                autoPlay
+                loop
+                muted
+                playsInline
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  pointerEvents: "none",
+                  display: "block",
+                }}
+              />
+            </div>
           </div>
+          </div>
+        </div>
+
+        {/* Bouncing scroll arrow */}
+        <div
+          onClick={() => document.getElementById("problem-section")?.scrollIntoView({ behavior: "smooth" })}
+          style={{
+            position: "absolute",
+            bottom: 32,
+            left: "50%",
+            transform: "translateX(-50%)",
+            animation: "bounce 1.5s ease-in-out infinite",
+            cursor: "pointer",
+          }}
+        >
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#2A7D6F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
         </div>
       </section>
 
@@ -361,10 +406,10 @@ export default function LandingPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {/* Keyword Search card */}
               <div style={{
-                background: "#e0ecea",
+                background: "#f5e0e0",
                 borderRadius: 16,
                 padding: 28,
-                border: "1px solid #a8c9c4",
+                border: "1px solid #d4a8a8",
                 display: "flex",
                 flexDirection: "column",
                 gap: 16,
@@ -378,13 +423,13 @@ export default function LandingPage() {
                     width: 8,
                     height: 8,
                     borderRadius: "50%",
-                    background: "#0D3D3A",
+                    background: "#C0392B",
                   }} />
                   <div style={{
                     fontFamily: "Space Mono, monospace",
                     fontSize: 12,
                     fontWeight: 700,
-                    color: "#0D3D3A",
+                    color: "#C0392B",
                     letterSpacing: 1,
                     textTransform: "uppercase",
                   }}>
@@ -405,7 +450,7 @@ export default function LandingPage() {
                 <div style={{
                   fontSize: 14,
                   fontWeight: 600,
-                  color: "#0D3D3A",
+                  color: "#C0392B",
                   fontFamily: "DM Sans, sans-serif",
                 }}>
                   0 results found
@@ -482,7 +527,7 @@ export default function LandingPage() {
           ...fadeStyle(archVisible),
         }}
       >
-        <div style={{ maxWidth: 1100, margin: "0 auto", position: "relative", zIndex: 1 }}>
+        <div style={{ maxWidth: 1300, margin: "0 auto", position: "relative", zIndex: 1 }}>
           <div style={{
             fontSize: 11,
             color: "#c4d9d6",
@@ -513,55 +558,49 @@ export default function LandingPage() {
             Click any node to explore the technical details
           </p>
 
-          {/* Pipeline flow */}
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 16,
-            flexWrap: "wrap",
-          }}>
-            {/* Query */}
-            {renderNode(PIPELINE_NODES[0])}
-            <div style={arrowStyle}>&rarr;</div>
-
-            {/* NLP Processor */}
-            {renderNode(PIPELINE_NODES[1])}
-            <div style={arrowStyle}>&rarr;</div>
-
-            {/* V1 / V2 / V3 stacked */}
-            <div style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 10,
-              alignItems: "center",
-              padding: "16px 12px",
-              border: "1px solid rgba(196,217,214,0.2)",
-              borderRadius: 16,
-              background: "rgba(42,125,111,0.08)",
-            }}>
+          {/* Pipeline flow — two rows */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 24 }}>
+            {/* Row 1: Query → NLP → Search Engines */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20 }}>
+              {renderNode(PIPELINE_NODES[0])}
+              <div style={arrowStyle}>&rarr;</div>
+              {renderNode(PIPELINE_NODES[1])}
+              <div style={arrowStyle}>&rarr;</div>
               <div style={{
-                fontSize: 9,
-                color: "#c4d9d6",
-                fontFamily: "Space Mono, monospace",
-                letterSpacing: 2,
-                textTransform: "uppercase",
-                marginBottom: 4,
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+                alignItems: "center",
+                padding: "20px 16px",
+                border: "1.5px solid rgba(196,217,214,0.2)",
+                borderRadius: 20,
+                background: "rgba(42,125,111,0.08)",
               }}>
-                Search Engines
+                <div style={{
+                  fontSize: 12,
+                  color: "#c4d9d6",
+                  fontFamily: "Space Mono, monospace",
+                  letterSpacing: 2,
+                  textTransform: "uppercase",
+                  marginBottom: 6,
+                }}>
+                  Search Engines
+                </div>
+                {renderNode(PIPELINE_NODES[2])}
+                {renderNode(PIPELINE_NODES[3])}
+                {renderNode(PIPELINE_NODES[4])}
               </div>
-              {renderNode(PIPELINE_NODES[2])}
-              {renderNode(PIPELINE_NODES[3])}
-              {renderNode(PIPELINE_NODES[4])}
             </div>
-            <div style={arrowStyle}>&rarr;</div>
 
-            {/* Ranker */}
-            {renderNode(PIPELINE_NODES[5])}
-            <div style={arrowStyle}>&rarr;</div>
+            {/* Vertical arrow */}
+            <div style={{ ...arrowStyle, fontSize: 60 }}>&darr;</div>
 
-            {/* Results + EDA */}
-            {renderNode(PIPELINE_NODES[6])}
+            {/* Row 2: Ranker → Results */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 20 }}>
+              {renderNode(PIPELINE_NODES[5])}
+              <div style={arrowStyle}>&rarr;</div>
+              {renderNode(PIPELINE_NODES[6])}
+            </div>
           </div>
         </div>
       </section>
@@ -600,69 +639,78 @@ export default function LandingPage() {
             From Keywords to Semantics
           </h2>
 
-          {/* Engine cards */}
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr",
-            gap: 20,
-            marginBottom: 48,
-          }}>
+          {/* Engine cards carousel */}
+          <Swiper
+            modules={[EffectCoverflow, Pagination, Autoplay]}
+            effect="coverflow"
+            centeredSlides
+            slidesPerView="auto"
+            initialSlide={1}
+            simulateTouch={false}
+            allowTouchMove={false}
+            coverflowEffect={{ rotate: 0, stretch: 0, depth: 120, modifier: 2, slideShadows: false }}
+            pagination={{ clickable: true }}
+            autoplay={{ delay: 4000, disableOnInteraction: true }}
+            style={{ paddingBottom: 48, marginBottom: 48 }}
+          >
             {ENGINES.map(eng => (
-              <div key={eng.name} style={{
-                background: "white",
-                border: "3px solid #0D3D3A",
-                borderRadius: 20,
-                padding: 32,
-                textAlign: "center",
-                boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
-              }}>
+              <SwiperSlide key={eng.name} style={{ width: 300 }}>
                 <div style={{
-                  fontSize: 32,
-                  fontWeight: 700,
-                  fontFamily: "Space Mono, monospace",
-                  color: eng.color,
-                  marginBottom: 6,
+                  background: "white",
+                  border: "3px solid #0D3D3A",
+                  borderRadius: 20,
+                  padding: 32,
+                  textAlign: "center",
+                  boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
                 }}>
-                  {eng.name}
+                  <div style={{
+                    fontSize: 32,
+                    fontWeight: 700,
+                    fontFamily: "Space Mono, monospace",
+                    color: eng.color,
+                    marginBottom: 6,
+                  }}>
+                    {eng.name}
+                  </div>
+                  <div style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: "#0D3D3A",
+                    marginBottom: 6,
+                  }}>
+                    {eng.subtitle}
+                  </div>
+                  <div style={{
+                    fontSize: 13,
+                    color: "#888",
+                    marginBottom: 24,
+                    lineHeight: 1.5,
+                  }}>
+                    {eng.desc}
+                  </div>
+                  <div style={{
+                    fontSize: 10,
+                    color: "#aaa",
+                    fontWeight: 500,
+                    marginBottom: 6,
+                    textTransform: "uppercase",
+                    letterSpacing: 2,
+                    fontFamily: "Space Mono, monospace",
+                  }}>
+                    MRR
+                  </div>
+                  <div style={{
+                    fontSize: 40,
+                    fontWeight: 700,
+                    fontFamily: "Space Mono, monospace",
+                    color: eng.color,
+                  }}>
+                    {(eng.mrr * 100).toFixed(0)}%
+                  </div>
                 </div>
-                <div style={{
-                  fontSize: 14,
-                  fontWeight: 600,
-                  color: "#0D3D3A",
-                  marginBottom: 6,
-                }}>
-                  {eng.subtitle}
-                </div>
-                <div style={{
-                  fontSize: 13,
-                  color: "#888",
-                  marginBottom: 24,
-                  lineHeight: 1.5,
-                }}>
-                  {eng.desc}
-                </div>
-                <div style={{
-                  fontSize: 10,
-                  color: "#aaa",
-                  fontWeight: 500,
-                  marginBottom: 6,
-                  textTransform: "uppercase",
-                  letterSpacing: 2,
-                  fontFamily: "Space Mono, monospace",
-                }}>
-                  NDCG@10
-                </div>
-                <div style={{
-                  fontSize: 40,
-                  fontWeight: 700,
-                  fontFamily: "Space Mono, monospace",
-                  color: eng.color,
-                }}>
-                  {(eng.ndcg * 100).toFixed(0)}%
-                </div>
-              </div>
+              </SwiperSlide>
             ))}
-          </div>
+          </Swiper>
 
           {/* Bar chart */}
           <div style={{
@@ -700,13 +748,142 @@ export default function LandingPage() {
       </section>
 
       {/* ════════════════════════════════════════════════════════════════════
+          Section 4b: Case Study Previews
+      ════════════════════════════════════════════════════════════════════ */}
+      <section
+        ref={caseRef}
+        style={{
+          background: "#0D3D3A",
+          padding: "120px 48px",
+          ...fadeStyle(caseVisible),
+        }}
+      >
+        <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+          <div style={{
+            fontSize: 11,
+            color: "#c4d9d6",
+            fontFamily: "Space Mono, monospace",
+            letterSpacing: 3,
+            textTransform: "uppercase",
+            marginBottom: 16,
+            textAlign: "center",
+          }}>
+            Case Studies
+          </div>
+          <h2 style={{
+            fontSize: 36,
+            fontWeight: 700,
+            color: "white",
+            fontFamily: "DM Sans, sans-serif",
+            marginBottom: 56,
+            textAlign: "center",
+          }}>
+            Drugs That Made History
+          </h2>
+
+          <Swiper
+            modules={[Navigation, Pagination]}
+            slidesPerView={1}
+            spaceBetween={32}
+            simulateTouch={false}
+            allowTouchMove={false}
+            navigation
+            pagination={{ clickable: true }}
+            breakpoints={{
+              768: { slidesPerView: 2 },
+              1024: { slidesPerView: 3 },
+            }}
+            style={{ paddingBottom: 48 }}
+          >
+            {CASE_PREVIEWS.map(c => (
+              <SwiperSlide key={c.name}>
+                <div style={{
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(196,217,214,0.2)",
+                  borderRadius: 20,
+                  padding: 32,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 16,
+                }}>
+                  <div style={{
+                    fontSize: 28,
+                    fontWeight: 700,
+                    fontFamily: "Space Mono, monospace",
+                    color: c.color,
+                  }}>
+                    {c.name}
+                  </div>
+                  <div style={{
+                    fontSize: 13,
+                    color: "rgba(255,255,255,0.5)",
+                    fontFamily: "DM Sans, sans-serif",
+                  }}>
+                    {c.generic} &middot; {c.class}
+                  </div>
+                  <div style={{
+                    fontSize: 12,
+                    color: "#c4d9d6",
+                    fontFamily: "Space Mono, monospace",
+                    letterSpacing: 1,
+                  }}>
+                    {c.years}
+                  </div>
+                  <div style={{
+                    fontSize: 14,
+                    color: "rgba(255,255,255,0.75)",
+                    lineHeight: 1.7,
+                    borderTop: "1px solid rgba(196,217,214,0.15)",
+                    paddingTop: 16,
+                  }}>
+                    {c.impact}
+                  </div>
+                  <button
+                    onClick={() => navigate("/case-studies")}
+                    style={{
+                      background: "transparent",
+                      color: c.color,
+                      border: `1px solid ${c.color}`,
+                      borderRadius: "4rem",
+                      padding: "10px 24px",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      fontFamily: "DM Sans, sans-serif",
+                      transition: "all 0.3s ease",
+                      alignSelf: "flex-start",
+                    }}
+                    onMouseOver={e => { e.currentTarget.style.background = c.color; e.currentTarget.style.color = "#0D3D3A"; }}
+                    onMouseOut={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = c.color; }}
+                  >
+                    Read Full Study
+                  </button>
+                </div>
+              </SwiperSlide>
+            ))}
+          </Swiper>
+
+          <div style={{ textAlign: "center", marginTop: 8 }}>
+            <button
+              onClick={() => navigate("/case-studies")}
+              style={ctaSecondaryStyle}
+              onMouseOver={e => { e.currentTarget.style.borderColor = "#c4d9d6"; e.currentTarget.style.color = "white"; }}
+              onMouseOut={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)"; e.currentTarget.style.color = "rgba(255,255,255,0.8)"; }}
+            >
+              View All Case Studies
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════════════
           Section 5: Tech Stack
       ════════════════════════════════════════════════════════════════════ */}
       <section
         ref={techRef}
         style={{
           background: "#E8EBE4",
-          padding: "0 48px 120px",
+          padding: "0 48px 48px",
           ...fadeStyle(techVisible),
         }}
       >
@@ -720,59 +897,70 @@ export default function LandingPage() {
             marginBottom: 16,
             textAlign: "center",
           }}>
-            Stack
+            Tech
           </div>
           <h2 style={{
             fontSize: 36,
             fontWeight: 700,
             color: "#0D3D3A",
             fontFamily: "DM Sans, sans-serif",
-            marginBottom: 48,
+            marginBottom: 24,
             textAlign: "center",
           }}>
             Built With
           </h2>
 
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr 1fr",
-            gap: 12,
-          }}>
+          <Swiper
+            modules={[Autoplay]}
+            slidesPerView={4}
+            spaceBetween={12}
+            loop
+            simulateTouch={false}
+            allowTouchMove={false}
+            autoplay={{ delay: 2500, disableOnInteraction: false }}
+            breakpoints={{
+              0: { slidesPerView: 2 },
+              768: { slidesPerView: 3 },
+              1024: { slidesPerView: 4 },
+            }}
+          >
             {TECH_STACK.map(item => (
-              <div key={item.name} style={{
-                background: "white",
-                border: "1px solid #c4d9d6",
-                borderRadius: 14,
-                padding: "20px 16px",
-                textAlign: "center",
-                transition: "all 0.3s ease",
-                cursor: "default",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
-              }}
-              onMouseOver={e => { e.currentTarget.style.borderColor = "#2A7D6F"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(42,125,111,0.15)"; }}
-              onMouseOut={e => { e.currentTarget.style.borderColor = "#c4d9d6"; e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,0.05)"; }}
-              >
+              <SwiperSlide key={item.name}>
                 <div style={{
-                  fontWeight: 700,
-                  fontSize: 14,
-                  color: "#0D3D3A",
-                  fontFamily: "DM Sans, sans-serif",
-                  marginBottom: 6,
-                }}>
-                  {item.name}
+                  background: "white",
+                  border: "1px solid #c4d9d6",
+                  borderRadius: 14,
+                  padding: "20px 16px",
+                  textAlign: "center",
+                  transition: "all 0.3s ease",
+                  cursor: "default",
+                  boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
+                }}
+                onMouseOver={e => { e.currentTarget.style.borderColor = "#2A7D6F"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(42,125,111,0.15)"; }}
+                onMouseOut={e => { e.currentTarget.style.borderColor = "#c4d9d6"; e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,0.05)"; }}
+                >
+                  <div style={{
+                    fontWeight: 700,
+                    fontSize: 14,
+                    color: "#0D3D3A",
+                    fontFamily: "DM Sans, sans-serif",
+                    marginBottom: 6,
+                  }}>
+                    {item.name}
+                  </div>
+                  <div style={{
+                    fontSize: 11,
+                    color: "#888",
+                    fontFamily: "Space Mono, monospace",
+                    letterSpacing: 0.5,
+                    textTransform: "uppercase",
+                  }}>
+                    {item.role}
+                  </div>
                 </div>
-                <div style={{
-                  fontSize: 11,
-                  color: "#888",
-                  fontFamily: "Space Mono, monospace",
-                  letterSpacing: 0.5,
-                  textTransform: "uppercase",
-                }}>
-                  {item.role}
-                </div>
-              </div>
+              </SwiperSlide>
             ))}
-          </div>
+          </Swiper>
         </div>
       </section>
 
