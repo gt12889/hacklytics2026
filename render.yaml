@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: rxguard-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: FDA_API_KEY
+        sync: false
