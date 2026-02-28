@@ -1,4 +1,4 @@
-# RxGuard — Drug Interaction Safety Intelligence
+# RxGuard |  Drug Interaction Safety Intelligence
 
 A semantic search engine for medication safety that retrieves dangerous drug interactions from FDA adverse event reports using vector embeddings — catching what keyword-based interaction checkers miss.
 
