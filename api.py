@@ -3,6 +3,7 @@ RxGuard FastAPI Backend
 Bridges the React frontend to the Python search/ranking/LLM pipeline.
 """
 
+import gc
 import os
 import sys
 import math
@@ -168,6 +169,8 @@ def startup():
     v3_search.fit(cases)
     print("[RxGuard] V3 Vector Search fitted")
 
+    gc.collect()
+
     # 4. Ranker + response generator
     ranker = ResultsRanker()
     response_gen = ResponseGenerator()
@@ -190,8 +193,9 @@ def startup():
     # 6. Precompute dataset-level analyses
     precomputed_heatmap = _precompute_heatmap(cases)
     print(f"[RxGuard] Precomputed heatmap: {len(precomputed_heatmap['drugs'])} drugs")
-    precomputed_retrieval_eval = _precompute_retrieval_eval(cases)
-    print(f"[RxGuard] Precomputed retrieval eval: {precomputed_retrieval_eval['queryCount']} queries")
+    # Retrieval eval is computed lazily on first /api/analysis request
+    # to reduce startup memory spike (runs 20 queries through all engines).
+    precomputed_retrieval_eval = None
 
     print("[RxGuard] Startup complete")
 
@@ -684,6 +688,9 @@ def parse(req: ParseRequest):
 @app.get("/api/analysis")
 def analysis():
     """Return precomputed dataset-level analyses (heatmap + retrieval eval)."""
+    global precomputed_retrieval_eval
+    if precomputed_retrieval_eval is None:
+        precomputed_retrieval_eval = _precompute_retrieval_eval(cases)
     return {
         "heatmap": precomputed_heatmap,
         "retrievalEval": precomputed_retrieval_eval,
