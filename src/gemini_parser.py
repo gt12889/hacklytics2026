@@ -6,7 +6,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+_client = None
+
+
+def _get_client():
+    global _client
+    if _client is None:
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            return None
+        _client = genai.Client(api_key=api_key)
+    return _client
 
 
 def parse_patient_text(text: str) -> dict:
@@ -20,6 +30,17 @@ def parse_patient_text(text: str) -> dict:
 For the sex, use 1 for "male" and 2 for "female". Fix capitalization for medicines and conditions (first letter capitalized). Fields: age, sex, preexisting_conditions, current_medications, prescribed_medications. 
 
 Text: \"{text}\" """
+
+    client = _get_client()
+    if client is None:
+        print("Warning: GEMINI_API_KEY not set — skipping Gemini parse")
+        return {
+            "age": None,
+            "sex": None,
+            "preexisting_conditions": [],
+            "current_medications": [],
+            "prescribed_medications": [],
+        }
 
     for attempt in range(5):
         try:
