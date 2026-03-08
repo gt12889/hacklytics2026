@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://rxguard-api.onrender.com/api/:path*"
+      "destination": "https://txguard.onrender.com/api/:path*"
     }
   ]
 }
